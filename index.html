@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07090f">
+<title>Surf × BJJ Coach</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body { background:#07090f; color:#e2e8f0; font-family:Georgia,'Times New Roman',serif; min-height:100vh; overflow-x:hidden; }
+button { font-family:Georgia,serif; border:none; cursor:pointer; }
+textarea,input { outline:none; font-family:Georgia,serif; }
+input[type=number] { -moz-appearance:textfield; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; }
+input[type=range] {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:32px; background:transparent; outline:none; cursor:pointer; padding:0; margin:0;
+}
+input[type=range]::-webkit-slider-runnable-track { height:6px; border-radius:3px; }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; appearance:none; width:30px; height:30px; border-radius:50%; margin-top:-12px;
+  background:currentColor; box-shadow:0 0 0 3px #07090f, 0 0 0 5px currentColor; transition:box-shadow .15s;
+}
+input[type=range]:active::-webkit-slider-thumb { box-shadow:0 0 0 3px #07090f, 0 0 0 7px currentColor, 0 0 18px currentColor; }
+input[type=range]::-moz-range-track { height:6px; border-radius:3px; background:#1f2937; }
+input[type=range]::-moz-range-thumb { width:30px; height:30px; border-radius:50%; border:none; background:currentColor; box-shadow:0 0 0 3px #07090f,0 0 0 5px currentColor; }
+.num-inp { background:#090e1a; border:1px solid #1f2937; border-radius:8px; color:#e2e8f0; font-size:20px; font-weight:700; text-align:center; padding:6px 2px; width:70px; }
+.step-btn { width:40px; height:40px; border-radius:50%; background:#0d1524; border:1.5px solid #1f2937; color:#94a3b8; font-size:22px; display:flex; align-items:center; justify-content:center; user-select:none; transition:all .1s; flex-shrink:0; }
+.step-btn:active { background:#1e293b; color:#e2e8f0; transform:scale(.93); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.fu { animation:fadeUp .3s ease forwards; }
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:#1f2937; border-radius:3px; }
+.modal-bg { position:fixed; inset:0; background:#000000cc; display:flex; align-items:flex-end; justify-content:center; z-index:200; }
+.modal { background:#0f1623; border:1px solid #1f2937; border-radius:20px 20px 0 0; padding:24px 20px 50px; width:100%; max-width:660px; max-height:92vh; overflow-y:auto; }
+.sn-ta { width:100%; background:#070b12; border:1px solid #1f2937; border-radius:8px; padding:10px 12px; color:#e2e8f0; font-size:12px; resize:vertical; min-height:60px; line-height:1.5; margin-top:8px; }
+.sn-ta:focus { border-color:#7c3aed; }
+.food-chip { padding:8px 12px; border-radius:20px; font-size:11px; cursor:pointer; border:1px solid #1f2937; background:#090e1a; color:#4b5563; transition:all .15s; }
+.food-chip.active { background:#22d3ee20; border-color:#22d3ee; color:#22d3ee; font-weight:700; }
+.food-item { padding:12px 14px; border-radius:10px; border:1px solid #1f2937; background:#090e1a; cursor:pointer; transition:all .15s; margin-bottom:6px; }
+.food-item.selected { border-color:#22d3ee; background:#22d3ee12; }
+.food-item:active { transform:scale(.98); }
+input[type=search]::-webkit-search-cancel-button { -webkit-appearance:none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const SURGERY_DATE = new Date('2026-04-24');
+const STORAGE_KEY  = 'surf_bjj_v6';
+const NUT_KEY      = 'surf_bjj_nut_v1';
+const JNL_KEY      = 'surf_bjj_journal_v1';
+const SUMMARY_KEY  = 'surf_bjj_summary_v1';
+const PROGRAM_KEY  = 'surf_bjj_program_v1';
+
+const BJJ_POSITIONS = ['Guard','Half Guard','Mount','Back Mount','Side Control','Turtle','Standing','North-South','Other'];
+const SURF_CONDITIONS_WIND = ['Offshore','Onshore','Cross-shore','Glassy','Light breeze'];
+const SURF_CONDITIONS_TIDE = ['Low','Mid','High','Incoming','Outgoing'];
+const SHIFTS = [
+  {label:'Morning',   times:'05:30–12:30'},
+  {label:'Day',       times:'08:30–16:00'},
+  {label:'Afternoon', times:'12:00–21:00'},
+  {label:'Evening',   times:'14:00–23:00'},
+  {label:'Off',       times:'Rest day'},
+];
+const RCOL = {GREEN:'#22c55e',AMBER:'#f59e0b',RED:'#ef4444'};
+const RBG  = {GREEN:'#052e16',AMBER:'#1c1206',RED:'#1a0808'};
+
+// ── FOOD DATABASE (per 100g cooked weight unless noted) ───────────────────────
+const FOODS = [
+  // BEEF
+  {name:'Rump Steak',           p:26, k:175, cat:'Beef'},
+  {name:'Ribeye Steak',         p:24, k:291, cat:'Beef'},
+  {name:'Sirloin Steak',        p:27, k:207, cat:'Beef'},
+  {name:'Eye Fillet',           p:28, k:212, cat:'Beef'},
+  {name:'T-Bone Steak',         p:24, k:247, cat:'Beef'},
+  {name:'Chuck Steak',          p:26, k:240, cat:'Beef'},
+  {name:'Ground Beef 80/20',    p:26, k:254, cat:'Beef'},
+  {name:'Ground Beef 90/10',    p:28, k:196, cat:'Beef'},
+  {name:'Brisket',              p:25, k:235, cat:'Beef'},
+  {name:'Beef Liver',           p:29, k:175, cat:'Beef'},
+  {name:'Beef Heart',           p:28, k:165, cat:'Beef'},
+  {name:'Beef Jerky (homemade dehydrated)', p:53, k:270, cat:'Beef'},
+  {name:'Beef Jerky (commercial)',          p:33, k:260, cat:'Beef'},
+  {name:'Beef Mince (lean)',    p:27, k:185, cat:'Beef'},
+  // LAMB
+  {name:'Lamb Chops',           p:25, k:260, cat:'Lamb'},
+  {name:'Lamb Mince',           p:24, k:258, cat:'Lamb'},
+  {name:'Lamb Shoulder',        p:25, k:270, cat:'Lamb'},
+  {name:'Lamb Rack',            p:22, k:294, cat:'Lamb'},
+  {name:'Lamb Cutlets',         p:24, k:252, cat:'Lamb'},
+  // PORK
+  {name:'Pork Belly',           p:19, k:518, cat:'Pork'},
+  {name:'Pork Chops',           p:27, k:231, cat:'Pork'},
+  {name:'Bacon (rind off)',     p:37, k:458, cat:'Pork'},
+  {name:'Bacon (with rind)',    p:37, k:541, cat:'Pork'},
+  {name:'Pork Ribs',            p:20, k:290, cat:'Pork'},
+  {name:'Pork Mince',           p:26, k:220, cat:'Pork'},
+  // POULTRY
+  {name:'Chicken Breast',       p:31, k:165, cat:'Poultry'},
+  {name:'Chicken Thigh',        p:26, k:209, cat:'Poultry'},
+  {name:'Chicken Drumstick',    p:24, k:190, cat:'Poultry'},
+  {name:'Chicken Wings',        p:23, k:266, cat:'Poultry'},
+  {name:'Chicken Mince',        p:27, k:180, cat:'Poultry'},
+  // FISH
+  {name:'Salmon',               p:25, k:208, cat:'Fish'},
+  {name:'Tuna (canned in water)',p:26, k:116, cat:'Fish'},
+  {name:'Tuna (canned in oil)', p:25, k:198, cat:'Fish'},
+  {name:'Sardines (canned)',    p:25, k:208, cat:'Fish'},
+  {name:'Prawns',               p:24, k:106, cat:'Fish'},
+  {name:'Barramundi',           p:23, k:110, cat:'Fish'},
+  {name:'Flathead',             p:22, k:95,  cat:'Fish'},
+  // EGGS — counted by number, not grams (Woolworths Free Range X-Large — official panel)
+  {name:'Whole Eggs (WW X-Large free range)',  p:7,  k:82,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'7g protein each — official WW panel'},
+  {name:'Fried Eggs (WW X-Large free range)',  p:7,  k:95,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'~5g butter added per egg'},
+  {name:'Scrambled Eggs (WW X-Large free range)',p:8, k:110, cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'with butter/cream'},
+  {name:'Boiled Eggs (WW X-Large free range)',  p:7,  k:80,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'no added fat'},
+  {name:'Poached Eggs (WW X-Large free range)', p:7,  k:80,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'no added fat'},
+  {name:'Egg Whites only',                      p:4,  k:17,  cat:'Eggs', countMode:true, unit:'white', unitLabel:'whites', note:'~30g per white'},
+  {name:'Whole Eggs — gram weight (per 100g)',  p:12, k:142, cat:'Eggs', note:'use for mixed egg dishes'},
+  // DAIRY
+  {name:'Butter',               p:1,  k:717, cat:'Dairy'},
+  {name:'Ghee',                 p:0,  k:900, cat:'Dairy'},
+  {name:'Hard Cheese (cheddar)',p:25, k:402, cat:'Dairy'},
+  {name:'Parmesan',             p:35, k:431, cat:'Dairy'},
+  {name:'Full Fat Greek Yoghurt',p:9, k:100, cat:'Dairy'},
+  {name:'Cream (thickened)',    p:2,  k:340, cat:'Dairy'},
+  {name:'Cottage Cheese',       p:11, k:98,  cat:'Dairy'},
+  // SNACKS / OTHER
+  {name:'Beef Jerky homemade (30g serve)', p:16, k:81,  cat:'Snacks'},
+  {name:'Beef Jerky commercial (30g serve)',p:10, k:78, cat:'Snacks'},
+  {name:'Pork Crackling',       p:32, k:544, cat:'Snacks'},
+  {name:'Macadamia Nuts (30g)', p:2,  k:204, cat:'Snacks'},
+  {name:'Hard Boiled Egg ×2',   p:13, k:155, cat:'Snacks', note:'approx 100g'},
+  // SUPPLEMENTS / PROTEIN — specific products
+  {name:'Bulk Nutrients HCP (per 100g)',         p:80, k:350, cat:'Supps', note:'Raw unflavoured — official ~80g/100g'},
+  {name:'Bulk Nutrients HCP (25g scoop)',        p:20, k:88,  cat:'Supps', note:'Standard serve — >20g protein'},
+  {name:'CollagenX Gelatin Powder (per 100g)',   p:86, k:350, cat:'Supps', note:'Pure bovine gelatin — use in hot liquid'},
+  {name:'CollagenX Gelatin Powder (10g serve)',  p:9,  k:35,  cat:'Supps', note:'1 heaped tsp — use in hot liquid/cooking'},
+  {name:'Best of the Bone concentrate (per tsp)',p:3,  k:24,  cat:'Supps', countMode:true, unit:'tsp', unitLabel:'tsp', note:'Official WW panel: 3.3g protein per 10g/tsp'},
+  {name:'Whey Protein Powder (per 100g)',        p:80, k:380, cat:'Supps'},
+];
+const FOOD_CATS = ['All','Beef','Lamb','Pork','Poultry','Fish','Eggs','Dairy','Snacks','Supps'];
+
+// ── SUPPLEMENTS ───────────────────────────────────────────────────────────────
+const SUPPS = [
+  {key:'creatine',  name:'Creatine',           dose:'5g',              timing:'Any time daily',                color:'#22c55e', why:'Reduces muscle loss during post-surgery immobilisation'},
+  {key:'omega3',    name:'Omega-3',             dose:'3–4g EPA+DHA',    timing:'With largest meal',             color:'#0ea5e9', why:'Anti-inflammatory — elbow tendon & labral repair'},
+  {key:'vitD3',     name:'Vitamin D3',          dose:'4000–5000 IU',    timing:'With fat-containing meal',      color:'#f59e0b', why:'Surgical recovery, immune function, bone density'},
+  {key:'vitK2',     name:'Vitamin K2 (MK-7)',   dose:'100–200mcg',      timing:'Take with D3',                  color:'#f97316', why:'Works with D3 — directs calcium to bones not arteries'},
+  {key:'magnesium', name:'Magnesium Glycinate',  dose:'400mg',           timing:'30–60 min before bed',          color:'#a78bfa', why:'Sleep quality on rotating shifts, muscle recovery'},
+  {key:'collagen',  name:'Collagen + Vit C',    dose:'15g + 50mg Vit C','timing':'30–60 min pre-training',       color:'#22d3ee', why:'Tendon synthesis window — critical timing for elbow rehab'},
+  {key:'zinc',      name:'Zinc',                dose:'25–30mg',         timing:'With meal, away from iron',     color:'#4ade80', why:'Tissue repair, wound healing, immune function'},
+];
+
+// ── SEED LOG ──────────────────────────────────────────────────────────────────
+const SEED_LOG = [
+  {date:'2026-03-06',sleepH:7,sleepM:0,sleepDec:7.0,sleepStr:'7h',sleepScore:75,rhr:54,hrv:32,energy:8,weight:'90.4',shift:'Off',gym:'Home',surf:true,bjj:true,readiness:'AMBER',readiness_score:58,session_title:'BJJ light 45min + 1hr surf + infrared sauna',completed:'BJJ light 45min + 1hr surf + infrared sauna',notes:'Elbow pain 5/10 on waking.',postSessionNote:'Back squat: 20kg×3, 30kg×3, 40kg×3, 50kg×3. RDL weights added. Rear foot elevated split squat no weight ×8, 2.5kg×8×8. Seated leg curl 10kg×12, 20kg×12, 25kg×12. Dead bug 3×12. Elbow pain 7 loading/deloading barbell only. Shoulder 0. Ave HR 98.'},
+  {date:'2026-03-07',sleepH:0,sleepM:0,sleepDec:0,sleepStr:'0h',sleepScore:75,rhr:49,hrv:43,energy:8,weight:'90.9',shift:'Day',gym:'Home',surf:false,bjj:false,readiness:'GREEN',readiness_score:72,session_title:'Upper body strength + elbow rehab',completed:'Upper body strength + elbow rehab',notes:'',postSessionNote:'Pull-ups 4×5 neutral grip. DB bench 20kg×10×10×10×10 RPE 6 — 20kg baseline confirmed. Face pulls 20kg×15×4. External rotation 10lb band×15. Serratus wall slides×15. Hanging knee raises 3×12. Pallof press up to 20lb×15. Isometric wrist ext 3kg×30sec pain 1-2. Eccentric wrist ext 3kg×12 pain 2-3. Supination/pronation 3kg×12 pain 3-4 after. Echo bike 10min Z2 HR 128, watts 175, speed 31.8.'},
+  {date:'2026-03-08',sleepH:6,sleepM:44,sleepDec:6.73,sleepStr:'6h 44m',sleepScore:75,rhr:47,hrv:41,energy:8,weight:'90.3',shift:'Day',gym:'Home',surf:false,bjj:false,readiness:'AMBER',readiness_score:65,session_title:'Lower body + elbow rehab + echo bike',completed:'Lower body + elbow rehab',notes:'',postSessionNote:'Echo bike 15min Z2 HR 124, watts 180. Front squat bar×8, 10×8, 20×8, 30×8. Bulgarian split squat 0×8, 5×8, 10×8. Glute bridge 3×10. Isometric wrist ext 1.25kg×30sec pain 3-4. Eccentrics 3kg×12 3 sets. Elbow aggravated ~4 post pronation/supination.'},
+  {date:'2026-03-09',sleepH:7,sleepM:6,sleepDec:7.1,sleepStr:'7h 6m',sleepScore:78,rhr:53,hrv:34,energy:8,weight:'91.1',shift:'Off',gym:'Home',surf:false,bjj:true,readiness:'AMBER',readiness_score:60,session_title:'BJJ + elbow rehab only',completed:'BJJ + elbow rehab',notes:'Elbow 4/10 waking.',postSessionNote:'Elbow 4/10 on waking, painful during BJJ. Isometric wrist ext 2.25kg 4×30sec. Eccentrics 2.25kg 3×10 — very irritated after 5-6. Elbow inflamed. Taped forearm — effective. Echo bike 20min HR 112, watts 127. Osteo visit — trigger point/massage, bursa treatment.'},
+  {date:'2026-03-10',sleepH:6,sleepM:44,sleepDec:6.73,sleepStr:'6h 44m',sleepScore:79,rhr:43,hrv:54,energy:8,weight:'90.4',shift:'Off',gym:'Home',surf:true,bjj:true,readiness:'GREEN',readiness_score:76,session_title:'Lower body + surf 35min + BJJ 50min technique',completed:'Lower body + surf + BJJ',notes:'35min sauna.',postSessionNote:'Surf 35min ave HR 126 max 154. BJJ 50min technique 5min sparring. Back squat 60kg×6×6×6×6. Bulgarian split squat 10kg×8×8×8. Glute bridge 40kg×10×10×10. Pallof press 20lb elbow 2/10. Echo bike 15min watts 156, speed 30.9. Elbow isometrics 2.25kg 4×35sec pain 2.'},
+  {date:'2026-03-11',sleepH:6,sleepM:20,sleepDec:6.33,sleepStr:'6h 20m',sleepScore:72,rhr:50,hrv:45,energy:7,weight:'90.0',shift:'Off',gym:'Home',surf:false,bjj:true,readiness:'AMBER',readiness_score:62,session_title:'Recovery conditioning + mobility + BJJ no-gi',completed:'Recovery + mobility + BJJ no-gi',notes:'Elbow stiff, painful morning.',postSessionNote:'BJJ no-gi 12min moderate sparring, elbow 2/10. Echo bike 20min HR 122, watts 146, speed 30km/h. Mobility 2 rounds: Cossack squats, hip airplanes, thoracic rotations, band pull-aparts. Face pulls 20kg×15, serratus punches, external rotation. Dead bug 3×12, side plank 3×20sec. Elbow isometric 2.25kg 4×30sec ≤1. Cork ball 3min.'},
+  {date:'2026-03-12',sleepH:7,sleepM:53,sleepDec:7.88,sleepStr:'7h 53m',sleepScore:80,rhr:48,hrv:40,energy:8,weight:'88.3',shift:'Off',gym:'Home',surf:false,bjj:true,readiness:'GREEN',readiness_score:74,session_title:'Upper body strength + BJJ technique + sparring',completed:'Upper body + BJJ',notes:'',postSessionNote:'Pull-ups neutral grip 6,5,5,5 — adjusted ROM, elbow 2 at top, shoulder pain full extension bottom. DB bench 20kg×10×10×10×10 RPE 6-7. Chest-supported row 12.5kg strapped ×10. Face pulls 20kg×15×4 <2 pain. Pallof press 20lb×15. Elbow isometric 2.25kg 4×35sec 0 during 3< after. Echo bike 15min HR 125, watts 146, speed 30.1. BJJ 1hr technique 10min moderate sparring strapped ≤3.'},
+  {date:'2026-03-13',sleepH:6,sleepM:26,sleepDec:6.43,sleepStr:'6h 26m',sleepScore:77,rhr:46,hrv:43,energy:8,weight:'88.9',shift:'Off',gym:'Home',surf:false,bjj:true,readiness:'AMBER',readiness_score:65,session_title:'Lower body strength + BJJ gi + BJJ no-gi',completed:'Lower body + BJJ ×2',notes:'BJJ morning light technique, strapped.',postSessionNote:'Back squat 65kg×6×6×6×6 2min rest. Bulgarian split squat 8kg×8×8×8 — challenging balance, right foot forward harder. Glute bridge 50kg×10×10×10. Landmine rotational press bar only 3×10 each side learning form. Echo bike 20min HR 128, watts 146. Elbow isometric 2.25kg 4×35sec 0 pain during 3< after. 0 pain loading plates. BJJ no-gi evening technique only strapped.'},
+  {date:'2026-03-14',sleepH:6,sleepM:35,sleepDec:6.58,sleepStr:'6h 35m',sleepScore:83,rhr:49,hrv:43,energy:8,weight:'88.0',shift:'Day',gym:'Work',surf:false,bjj:false,readiness:'AMBER',readiness_score:65,session_title:'Easy conditioning + mobility + surf pop-up + core + elbow rehab',completed:'Conditioning + mobility + core + elbow rehab',notes:'',postSessionNote:'Assault bike 20min Z2 ave HR 126. Mobility 2 rounds: 12 Cossack squats, 10 hip airplanes (glutes tight, harder standing on left leg), 12 thoracic rotations, 15 band pull-aparts. Landmine rotational press 5kg 3×8 each side slow controlled. Dead bugs 3×12, side plank 3×25sec. Elbow isometric 3kg 3×30sec ≤1. Cork ball 3min. No elbow pain on any movement. Tendon calmed. Could progress eccentrics next time.'},
+  {date:'2026-03-15',sleepH:7,sleepM:25,sleepDec:7.42,sleepStr:'7h 25m',sleepScore:81,rhr:49,hrv:39,energy:8,weight:'88.9',bodyBattery:'76',shift:'Day',gym:'Work',surf:false,bjj:false,readiness:'AMBER',readiness_score:68,session_title:'Conditioning + lower body strength + surf power + core + elbow rehab',completed:'Conditioning + lower body + core + elbow rehab',notes:'Elbow <2, 0 at rest, pain only through ROM with fist. Shoulder 0.',postSessionNote:'C2 rower 20min HR 129 ave pace 2:17.6 — irritated elbow slightly during rowing. Back squat warm-up 20kg×8, 40×5, working 70kg×6×6×6×6 rest 90sec-2min (up from 65kg). Seated leg curl 3×12 moderate slow eccentric. Bulgarian split squat 10kg DBs 3×8 each leg. Landmine rotational press 10kg 3×8 each side — slight lower back fatigue/tightness during. Dead bugs 3×12, side plank 3×30sec each side. Elbow rehab: isometric wrist ext 3kg 4×35sec pain 1. Eccentrics 3kg 1×8 4sec lower — pain 4-5 end of set, stopped. Rowing likely pre-fatigued tendon. Need: reposition arm, lighter load (2kg), or longer rest after isometrics before eccentrics. Cork ball 3min.'},
+  {date:'2026-03-16',sleepH:6,sleepM:48,sleepDec:6.8,sleepStr:'6h 48m',sleepScore:78,rhr:46,hrv:40,energy:8,weight:'88.7',bodyBattery:'81',shift:'Day',gym:'Work',surf:true,bjj:false,readiness:'AMBER',readiness_score:68,
+  session_title:'Upper body pull/push + shoulder stability + elbow rehab + surf 52min',
+  completed:'Upper body + elbow rehab + surf South Palm Beach',
+  notes:'Elbow pain 2-3 on flexion with fist only, none at rest. Right shoulder unstable on pressing.',
+  postSessionNote:'Forearm strapped throughout except rehab. Warm-up: C2 rower 5min HR 120-130. 2 rounds: 10 band pull-aparts, 10 scap push-ups, 10 thoracic rotations. Seated row machine 20kg×10×10×10×10 — elbow pain 2 when pulled back, grip made little difference. DB bench press 22.5kg×10×10×10×10 RPE 6-7 (up from 20kg) — shoulder not painful but uncomfortable and unstable, cannot contract right pec correctly. Chest-supported DB row 10×10×10, 12.5×10×10. Band face pulls light 3×15, external rotation band 3×15 each side. Dead bugs 3×12, Pallof press band 3×12. No conditioning — ran out of time, possible second session tonight with conditioning + second elbow rehab. Elbow rehab: isometric wrist ext 3kg 4×35sec pain ≤1 — ready to increase load or duration or add second daily session. Eccentrics 2kg 3×8 4sec lower — pain ≤2 during, spiked to 3 after straightening arm on first set only, dissipated quickly, sets 2-3 fine. Cork ball 3min. NOTE: needs more upper chest development — adjust pressing to incline/upper chest focus going forward. Surf: South Palm Beach 52min ave HR 123, Z1 8min, Z2 31min, Z3 13min.'},
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function daysLeft()   { return Math.max(0,Math.ceil((SURGERY_DATE-new Date())/86400000)); }
+function weeksLeft()  { return Math.ceil(daysLeft()/7); }
+function todayKey()   { return new Date().toISOString().slice(0,10); }
+function todayLabel() { return new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'}).toUpperCase(); }
+function sleepDec(h,m){ return +(h+m/60).toFixed(2); }
+function sleepStr(h,m){ return m>0?`${h}h ${m}m`:`${h}h`; }
+function clamp(v,a,b) { return Math.min(b,Math.max(a,v)); }
+function timeNow()    { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; }
+function durStr(ms)   { const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); return `${h}h ${String(m).padStart(2,'0')}m`; }
+function garminBand(s){
+  if(!s&&s!==0) return {label:'—',color:'#475569'};
+  if(s>=90) return {label:'Excellent',color:'#22c55e'};
+  if(s>=75) return {label:'Good',color:'#4ade80'};
+  if(s>=60) return {label:'Fair',color:'#f59e0b'};
+  if(s>=40) return {label:'Poor',color:'#f97316'};
+  return {label:'Very poor',color:'#ef4444'};
+}
+function bbColor(v){ const n=parseInt(v)||0; return n>=70?'#22c55e':n>=40?'#f59e0b':'#ef4444'; }
+function d(tag,css=''){ const e=document.createElement(tag); if(css) e.style.cssText=css; return e; }
+function mkCard(ac,lbl){ const c=d('div','background:#0b1120;border:1px solid #111827;border-radius:14px;padding:20px;margin-bottom:12px;'); const l=d('div',`font-size:10px;color:${ac};font-weight:700;letter-spacing:.2em;margin-bottom:14px;`); l.textContent=lbl; c.appendChild(l); return c; }
+function secLbl(t){ const e=d('div','font-size:10px;color:#4b5563;margin-bottom:8px;letter-spacing:.1em;'); e.textContent=t; return e; }
+
+// ── TRAINING STORAGE ──────────────────────────────────────────────────────────
+function loadLog(){
+  try{
+    const stored=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+    if(!stored||stored.length===0){
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(SEED_LOG));
+      return JSON.parse(JSON.stringify(SEED_LOG));
+    }
+    // Seed entries always win for their own dates — preserves accurate historical data
+    // User entries for dates NOT in seed are kept as-is
+    const seedDates=new Set(SEED_LOG.map(e=>e.date));
+    const userOnly=stored.filter(e=>!seedDates.has(e.date));
+    const merged=[...SEED_LOG,...userOnly].sort((a,b)=>a.date.localeCompare(b.date));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));
+    return merged;
+  }catch{ return JSON.parse(JSON.stringify(SEED_LOG)); }
+}
+function saveLog(){
+  try{
+    // When saving, preserve seed entries — only overwrite seed dates if it's today's live check-in
+    const today=todayKey();
+    const seedDates=new Set(SEED_LOG.map(e=>e.date));
+    const toSave=S.log.map(e=>{
+      // If this is a seed date AND not today, always keep the seed version
+      if(seedDates.has(e.date)&&e.date!==today){
+        return SEED_LOG.find(s=>s.date===e.date)||e;
+      }
+      return e;
+    });
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(toSave));
+  }catch{}
+}
+
+// ── NUTRITION STORAGE ─────────────────────────────────────────────────────────
+function loadNut(date){
+  try{
+    const all=JSON.parse(localStorage.getItem(NUT_KEY)||'{}');
+    return all[date]||{foods:[],supps:{},eatStart:null,eatEnd:null};
+  }catch{ return {foods:[],supps:{},eatStart:null,eatEnd:null}; }
+}
+function saveNut(date,data){
+  try{
+    const all=JSON.parse(localStorage.getItem(NUT_KEY)||'{}');
+    all[date]=data; localStorage.setItem(NUT_KEY,JSON.stringify(all));
+  }catch{}
+}
+function proteinTarget(){
+  const wt=parseFloat([...S.log].reverse().find(e=>e.weight)?.weight||'89');
+  return Math.round(wt*2);
+}
+
+// ── JOURNAL STORAGE ───────────────────────────────────────────────────────────
+function loadJournal(){ try{ return JSON.parse(localStorage.getItem(JNL_KEY)||'[]'); }catch{ return []; } }
+function saveJournal(){ try{ localStorage.setItem(JNL_KEY,JSON.stringify(S.journal)); }catch{} }
+
+// ── SUMMARY STORAGE ───────────────────────────────────────────────────────────
+// Stores condensed summaries of sessions older than the 30-session window
+function loadSummaries(){ try{ return JSON.parse(localStorage.getItem(SUMMARY_KEY)||'[]'); }catch{ return []; } }
+function saveSummaries(){ try{ localStorage.setItem(SUMMARY_KEY,JSON.stringify(S.summaries)); }catch{} }
+
+// ── PROGRAM CONTEXT STORAGE ───────────────────────────────────────────────────
+// Stores history of goal/program updates triggered by user
+function loadPrograms(){ try{ return JSON.parse(localStorage.getItem(PROGRAM_KEY)||'[]'); }catch{ return []; } }
+function savePrograms(){ try{ localStorage.setItem(PROGRAM_KEY,JSON.stringify(S.programs)); }catch{} }
+function activeProgram(){ return S.programs.length>0?S.programs[S.programs.length-1]:null; }
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let S = {
+  screen:'checkin',
+  sleepH:7,sleepM:0,sleepScore:75,
+  rhr:52,hrv:55,energy:7,
+  bodyBattery:'',stress:'',respRate:'',
+  shift:'Day',gym:'Home',surf:false,bjj:false,
+  weight:'',notes:'',
+  plan:null,loading:false,error:null,
+  ticked:{},blockNotes:{},sessionDone:false,postSessionNote:'',
+  log:[],
+  showAddModal:false,
+  addForm:{date:todayKey(),sleepH:7,sleepM:0,sleepScore:75,rhr:52,hrv:55,energy:7,bodyBattery:'',weight:'',shift:'Day',gym:'Home',surf:false,bjj:false,session_title:'',readiness:'GREEN',notes:''},
+  // nutrition
+  nutDate:todayKey(),
+  nut:{foods:[],supps:{},eatStart:null,eatEnd:null},
+  showAddFood:false,
+  foodSearch:'',
+  foodCat:'All',
+  selFood:null,
+  foodGrams:300,
+  foodCount:4,
+  suppDetail:null,
+  // journal
+  journal:[],
+  showJournalModal:false,
+  journalType:'bjj', // 'bjj' or 'surf'
+  jForm:null, // active form state
+  journalViewEntry:null, // entry being viewed
+  // session feedback
+  feedback:null, feedbackLoading:false, showFeedbackModal:false,
+  // summaries + program contexts
+  summaries:[], programs:[],
+  showGoalModal:false, goalText:'', goalLoading:false, goalError:null,
+  showProgramHistory:false,
+};
+S.log     = loadLog();
+S.nut     = loadNut(todayKey());
+S.journal = loadJournal();
+S.summaries = loadSummaries();
+S.programs  = loadPrograms();
+
+function freshBJJForm(){
+  return {date:todayKey(),type:'bjj',location:'',techniques:[{name:'',position:'Guard',keySteps:'',notes:''}],rounds:[{partner:'',duration:'',result:'Win',submission:'',notes:''}],wins:0,losses:0,sessionNotes:'',drillNext:''};
+}
+function freshSurfForm(){
+  return {date:todayKey(),type:'surf',location:'',swellSize:'',swellDir:'',wind:'Offshore',tide:'Mid',board:'',sessionFocus:'',wentWell:'',workOn:'',rating:7,sessionNotes:''};
+}
+
+// ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
+function sysPrompt(){
+  const dl=daysLeft(),wl=weeksLeft();
+  const recent=S.log.slice(-30).map(e=>{
+    let line=`${e.date}: Sleep ${e.sleepStr||e.sleep+'h'} score:${e.sleepScore||'?'} | RHR ${e.rhr}bpm | HRV ${e.hrv}ms | E:${e.energy}/10 | Wt:${e.weight||'?'}kg | ${e.bodyBattery?'BB:'+e.bodyBattery+' |':''} Shift:${e.shift} | Gym:${e.gym} | ${e.session_title||'not logged'}`;
+    if(e.postSessionNote) line+=` | Post: "${e.postSessionNote.slice(0,200)}"`;
+    return line;
+  }).join('\n')||'No history yet.';
+  const summaryBlock=S.summaries.length>0
+    ?`\nHISTORICAL SUMMARY (sessions older than recent 30):\n${S.summaries.map(s=>`${s.dateRange}: ${s.text}`).join('\n')}`:'';
+  const prog=activeProgram();
+  const programBlock=prog
+    ?`\nACTIVE PROGRAM CONTEXT (set ${prog.date}):\nTrigger: "${prog.trigger}"\n${prog.context}`:
+    '';
+  return `You are an elite S&C coach for a surf/BJJ athlete.
+PROFILE: Male, rotating shift worker. Surgery: RIGHT SHOULDER April 24 2026 — ${dl} days (~${wl}wks).
+Procedures: Right biceps tenodesis, labral repair, right shoulder stabilisation.
+Sports: Surf 2-4x/wk, BJJ 2-4x/wk — count as training load.
+Diet: Carnivore/animal-based, intermittent fasting most days. High protein priority.
+
+LEFT ELBOW — lateral epicondylalgia, moderate, improving week 3:
+- Isometrics: 3kg 4×35sec baseline, pain ≤1 consistently
+- Eccentrics: Attempted Mar 15 at 3kg — pain 4-5 end of set after rowing pre-fatigue. Next attempt: 2kg, more rest after isometrics, no prior elbow-loading cardio same session, reposition arm out to side
+- Rowing aggravates elbow — use bike/ski erg preference for conditioning days
+- Taping forearm close to elbow consistently effective — always recommend
+- Pronation/supination: reintroduce only once eccentrics pain-free
+- Daily rehab mandatory every session
+
+RIGHT SHOULDER PREHAB: Discomfort at full extension. Limit ROM. Keep face pulls, pull-aparts, external rotation, serratus. No heavy overhead right side.
+
+HRV BASELINE: 34-47ms personal range. Calibrate ALL readiness to this.
+- GREEN: HRV≥45, RHR≤50, Sleep≥7h, Score≥78, BB≥70, Energy≥7
+- AMBER: HRV 35-44 OR RHR 50-58 OR Sleep 6-7h OR Score 65-77 OR BB 40-69 OR Energy 5-6
+- RED: HRV<34 OR RHR>60 OR Sleep<6h OR Score<60 OR BB<40 OR Energy≤4
+
+STRENGTH BASELINES (as of Mar 16):
+- Back squat: 70kg×6 | Bulgarian split squat: 10kg DBs×8 | Glute bridge: 50kg×10
+- DB bench: 22.5kg×10 RPE 6-7 (progressed from 20kg Mar 16) — NOTE: right shoulder unstable, cannot contract right pec correctly, prioritise INCLINE press to develop upper chest
+- Pull-ups: 5-6 reps | Seated row: 20kg×10 (elbow pain 2 on pull) | Chest-supported row: 12.5kg
+- Landmine rotational press: 10kg 3×8 (brace cue — lower back tightness noted)
+- Echo bike Z2: 146 watts, 30-31km/h | Rowing: 2:17.6/500m (avoid elbow-heavy days)
+- Elbow rehab: isometrics 3kg 4×35sec pain ≤1 (ready to progress load/duration). Eccentrics 2kg 3×8 pain ≤2 (progressed from failed 3kg attempt — 2kg is current working weight)
+
+EQUIPMENT: HOME: power cage, DBs, plates, Echo Assault Bike, leg ext/curl. WORK: ski erg, C2 rower, assault bike, flat+incline benches, DBs.
+
+PERIODISATION: Wks 1-2 done. Wks 3-4 NOW: Accumulate 70-80%. Wks 5-6: Intensify 80-90%. Wk7+: Taper. Apr 17-24: mobility+easy only.
+${programBlock}${summaryBlock}
+
+RECENT LOG (last 30 sessions):
+${recent}
+
+JSON only, no markdown:
+{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics and post-session notes","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"title","session_type":"HOME_STRENGTH|HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"warmup","blocks":[{"title":"name","exercises":[{"name":"ex","sets":"3x8","load":"specific load from baselines","notes":"cue + arm mod"}]}],"elbow_block":{"title":"Daily Elbow Rehab — 8 min","exercises":[{"name":"ex","sets":"sets","load":"load","notes":"specific note for this week"}]},"cooldown":"cooldown","coach_note":"personalised insight referencing history and baselines","surf_bjj_note":"advice today","surgery_note":"note given ${dl} days to right shoulder surgery"}`;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML='';
+  app.appendChild(mkNav());
+  const w=d('div','max-width:660px;margin:0 auto;padding:20px 16px 80px;');
+  if     (S.screen==='checkin')   w.appendChild(mkCheckin());
+  else if(S.screen==='plan')      w.appendChild(mkPlan());
+  else if(S.screen==='history')   w.appendChild(mkHistory());
+  else if(S.screen==='nutrition') w.appendChild(mkNutrition());
+  else if(S.screen==='journal')   w.appendChild(mkJournal());
+  app.appendChild(w);
+  if(S.showAddModal)  app.appendChild(mkAddModal());
+  if(S.showAddFood)   app.appendChild(mkAddFoodModal());
+  if(S.suppDetail!==null) app.appendChild(mkSuppDetail());
+  if(S.showJournalModal)  app.appendChild(mkJournalModal());
+  if(S.journalViewEntry)  app.appendChild(mkJournalView());
+  if(S.showFeedbackModal) app.appendChild(mkFeedbackModal());
+  if(S.showGoalModal)     app.appendChild(mkGoalModal());
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function mkNav(){
+  const nav=d('div','background:#070b12;border-bottom:1px solid #111827;padding:0 16px;position:sticky;top:0;z-index:50;');
+  const inn=d('div','max-width:660px;margin:0 auto;display:flex;align-items:center;padding:10px 0;gap:3px;');
+  const br=d('div','flex:1;');
+  br.innerHTML=`<div style="font-size:10px;font-weight:700;letter-spacing:.2em;color:#1e40af;">SURF×BJJ</div><div style="font-size:9px;color:#374151;"><span style="color:#ef4444;">⬤</span> ${daysLeft()}d</div>`;
+  inn.appendChild(br);
+  [['checkin','CHECK-IN'],['plan','TODAY'],['history','LOG'],['nutrition','FOOD'],['journal','JOURNAL']].forEach(([id,lbl])=>{
+    const a=S.screen===id;
+    const b=d('button',`background:${a?'#111827':'transparent'};border:1px solid ${a?'#1f2937':'transparent'};color:${a?'#e2e8f0':'#4b5563'};padding:6px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:.06em;`);
+    b.textContent=lbl; b.onclick=()=>{S.screen=id;render();}; inn.appendChild(b);
+  });
+  nav.appendChild(inn); return nav;
+}
+
+// ── SLIDER + STEPPER ──────────────────────────────────────────────────────────
+function mkSliderStepper(val,min,max,color,cb,display){
+  const w=d('div','margin-bottom:6px;');
+  const row=d('div','display:flex;align-items:center;gap:10px;margin-bottom:10px;');
+  const dn=d('button',''); dn.className='step-btn'; dn.textContent='−'; dn.onclick=()=>cb(clamp(val-1,min,max));
+  const vl=d('div','flex:1;text-align:center;font-size:18px;font-weight:700;'); vl.style.color=color; vl.textContent=display;
+  const up=d('button',''); up.className='step-btn'; up.textContent='+'; up.onclick=()=>cb(clamp(val+1,min,max));
+  row.appendChild(dn); row.appendChild(vl); row.appendChild(up); w.appendChild(row);
+  const inp=document.createElement('input'); inp.type='range'; inp.min=min; inp.max=max; inp.value=val; inp.style.color=color;
+  function upd(){ const p=((inp.value-min)/(max-min))*100; inp.style.background=`linear-gradient(to right,${color} ${p}%,#1f2937 ${p}%)`; } upd();
+  inp.addEventListener('input',e=>{cb(Number(e.target.value));upd();}); w.appendChild(inp);
+  const ll=d('div','display:flex;justify-content:space-between;font-size:9px;color:#334155;margin-top:2px;');
+  ll.innerHTML=`<span>${min}</span><span>${max}</span>`; w.appendChild(ll); return w;
+}
+function mkStepW(lbl,val,min,max,color,cb){
+  const w=d('div','display:flex;flex-direction:column;align-items:center;gap:6px;');
+  const lb=d('div','font-size:9px;color:#475569;letter-spacing:.1em;'); lb.textContent=lbl.toUpperCase(); w.appendChild(lb);
+  const row=d('div','display:flex;align-items:center;gap:8px;');
+  const dn=d('button',''); dn.className='step-btn'; dn.textContent='−'; dn.onclick=()=>cb(val<=min?min:val-1);
+  const ni=document.createElement('input'); ni.type='number'; ni.min=min; ni.max=max; ni.value=val; ni.className='num-inp';
+  ni.style.color=color; ni.style.borderColor=color+'50'; ni.addEventListener('change',e=>cb(clamp(parseInt(e.target.value)||0,min,max)));
+  const up=d('button',''); up.className='step-btn'; up.textContent='+'; up.onclick=()=>cb(val>=max?max:val+1);
+  row.appendChild(dn); row.appendChild(ni); row.appendChild(up); w.appendChild(row); return w;
+}
+
+// ── CHECK-IN ──────────────────────────────────────────────────────────────────
+function mkCheckin(){
+  const w=d('div','');
+  const h=d('div','margin-bottom:22px;');
+  h.innerHTML=`<p style="font-size:10px;letter-spacing:.25em;color:#374151;margin-bottom:6px;font-family:monospace;">${todayLabel()}</p><h1 style="font-size:clamp(26px,7vw,38px);font-weight:900;line-height:1.05;margin-bottom:6px;background:linear-gradient(135deg,#e2e8f0 40%,#475569);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Morning<br>Check-In</h1><p style="font-size:12px;color:#4b5563;line-height:1.6;">Your metrics → your session, built fresh every day.</p>`;
+  w.appendChild(h);
+  // SLEEP
+  const sc=mkCard('#22d3ee','SLEEP');
+  sc.appendChild(secLbl('DURATION'));
+  const slr=d('div','display:flex;gap:12px;align-items:center;margin-bottom:14px;');
+  slr.appendChild(mkStepW('Hours',S.sleepH,0,14,'#22d3ee',v=>{S.sleepH=clamp(v,0,14);render();}));
+  const col=d('div','font-size:24px;color:#1f2937;padding-top:18px;'); col.textContent=':'; slr.appendChild(col);
+  slr.appendChild(mkStepW('Mins',S.sleepM,0,59,'#22d3ee',v=>{S.sleepM=clamp(v,0,59);render();}));
+  const tot=d('div','flex:1;text-align:right;padding-top:18px;');
+  tot.innerHTML=`<span style="font-size:11px;color:#475569;">Total</span><br><span style="font-size:18px;font-weight:700;color:#22d3ee;">${sleepStr(S.sleepH,S.sleepM)}</span>`;
+  slr.appendChild(tot); sc.appendChild(slr);
+  sc.appendChild(secLbl('GARMIN SLEEP SCORE'));
+  const gb=garminBand(S.sleepScore);
+  sc.appendChild(mkSliderStepper(S.sleepScore,0,100,gb.color,v=>{S.sleepScore=v;render();},`${S.sleepScore} — ${gb.label}`));
+  w.appendChild(sc);
+  // RECOVERY METRICS
+  const mc=mkCard('#22d3ee','GARMIN RECOVERY METRICS');
+  mc.appendChild(secLbl('RESTING HEART RATE'));
+  const rC=S.rhr<=50?'#22c55e':S.rhr<=58?'#f59e0b':'#ef4444';
+  mc.appendChild(mkSliderStepper(S.rhr,35,90,rC,v=>{S.rhr=v;render();},`${S.rhr} bpm`));
+  mc.appendChild(d('div','margin-bottom:16px;'));
+  mc.appendChild(secLbl('HRV'));
+  const hC=S.hrv>=45?'#22c55e':S.hrv>=34?'#f59e0b':'#ef4444';
+  mc.appendChild(mkSliderStepper(S.hrv,20,120,hC,v=>{S.hrv=v;render();},`${S.hrv} ms`));
+  mc.appendChild(d('div','margin-bottom:16px;'));
+  mc.appendChild(secLbl('BODY BATTERY  ·  STRESS  ·  RESP RATE'));
+  const tr=d('div','display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px;');
+  [{key:'bodyBattery',lbl:'Body\nBattery',unit:'/100',col:bbColor(S.bodyBattery)},{key:'stress',lbl:'Stress',unit:'/100',col:'#a78bfa'},{key:'respRate',lbl:'Resp\nRate',unit:'/min',col:'#22d3ee'}].forEach(f=>{
+    const c=d('div','display:flex;flex-direction:column;align-items:center;gap:4px;');
+    const l=d('div','font-size:9px;color:#475569;text-align:center;white-space:pre;'); l.textContent=f.lbl; c.appendChild(l);
+    const i=document.createElement('input'); i.type='number'; i.placeholder='—'; i.value=S[f.key]||''; i.className='num-inp';
+    i.style.cssText=`color:${f.col};border-color:${f.col}40;width:100%;font-size:18px;`;
+    i.addEventListener('input',e=>{S[f.key]=e.target.value;});
+    c.appendChild(i);
+    const u=d('div','font-size:9px;color:#374151;'); u.textContent=f.unit; c.appendChild(u); tr.appendChild(c);
+  });
+  mc.appendChild(tr); w.appendChild(mc);
+  // ENERGY
+  const ec=mkCard('#a78bfa','ENERGY LEVEL');
+  const eg=d('div','display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:6px;');
+  for(let v=1;v<=10;v++){
+    const col=v<=3?'#ef4444':v<=6?'#f59e0b':'#22c55e',a=S.energy===v;
+    const b=d('button',`background:${a?col:'#090e1a'};border:1px solid ${a?col:'#1f2937'};border-radius:7px;padding:11px 0;color:${a?'#fff':'#374151'};font-size:13px;font-weight:700;`);
+    b.textContent=String(v); b.onclick=()=>{S.energy=v;render();}; eg.appendChild(b);
+  }
+  ec.appendChild(eg);
+  const el2=d('div','display:flex;justify-content:space-between;font-size:9px;color:#374151;');
+  el2.innerHTML='<span>CRASHED</span><span>MODERATE</span><span>PEAK</span>'; ec.appendChild(el2); w.appendChild(ec);
+  // CONTEXT
+  const cc=mkCard('#f59e0b',"TODAY'S CONTEXT");
+  cc.appendChild(secLbl('SHIFT'));
+  const sw=d('div','display:flex;flex-direction:column;gap:6px;margin-bottom:16px;');
+  SHIFTS.forEach(sh=>{
+    const a=S.shift===sh.label;
+    const b=d('button',`display:flex;justify-content:space-between;align-items:center;width:100%;padding:10px 14px;border-radius:10px;background:${a?'#f59e0b18':'#090e1a'};border:1px solid ${a?'#f59e0b':'#1f2937'};`);
+    const lb=d('span',`font-size:13px;font-weight:${a?700:400};color:${a?'#f59e0b':'#4b5563'};`); lb.textContent=sh.label;
+    const tm=d('span',`font-size:11px;color:${a?'#f59e0b80':'#374151'};font-family:monospace;`); tm.textContent=sh.times;
+    b.appendChild(lb); b.appendChild(tm); b.onclick=()=>{S.shift=sh.label;render();}; sw.appendChild(b);
+  });
+  cc.appendChild(sw);
+  cc.appendChild(secLbl('GYM ACCESS'));
+  const gr=d('div','display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;');
+  ['Home','Work','Both','None'].forEach(g=>{
+    const a=S.gym===g;
+    const b=d('button',`background:${a?'#22d3ee18':'#090e1a'};border:1px solid ${a?'#22d3ee':'#1f2937'};color:${a?'#22d3ee':'#4b5563'};padding:7px 15px;border-radius:20px;font-size:11px;font-weight:${a?700:400};`);
+    b.textContent=g; b.onclick=()=>{S.gym=g;render();}; gr.appendChild(b);
+  });
+  cc.appendChild(gr);
+  cc.appendChild(secLbl('SPORT TODAY'));
+  const spr=d('div','display:flex;gap:8px;');
+  [['🌊 Surf','surf'],['🥋 BJJ','bjj']].forEach(([lbl,key])=>{
+    const a=S[key];
+    const b=d('button',`background:${a?'#0ea5e918':'#090e1a'};border:1px solid ${a?'#0ea5e9':'#1f2937'};color:${a?'#0ea5e9':'#4b5563'};padding:9px 18px;border-radius:20px;font-size:12px;font-weight:${a?700:400};`);
+    b.textContent=lbl; b.onclick=()=>{S[key]=!S[key];render();}; spr.appendChild(b);
+  });
+  cc.appendChild(spr); w.appendChild(cc);
+  // BODY METRICS
+  const bmc=mkCard('#f97316','BODY METRICS');
+  bmc.appendChild(secLbl('FASTED WEIGHT — first thing, post toilet'));
+  const wr=d('div','display:flex;align-items:center;gap:12px;margin-top:2px;');
+  const wi=document.createElement('input'); wi.type='number'; wi.step='0.1'; wi.placeholder='0.0'; wi.value=S.weight||''; wi.className='num-inp';
+  wi.style.cssText='color:#f97316;border-color:#f9741650;width:90px;font-size:20px;';
+  wi.addEventListener('input',e=>{S.weight=e.target.value;});
+  const wu=d('span','font-size:16px;color:#475569;'); wu.textContent='kg'; wr.appendChild(wi); wr.appendChild(wu); bmc.appendChild(wr); w.appendChild(bmc);
+  // NOTES
+  const nc=mkCard('#475569','MORNING NOTES (optional)');
+  const ta=document.createElement('textarea');
+  ta.placeholder='e.g. left elbow tight, sore lower back, right shoulder aching...';
+  ta.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:12px;resize:vertical;min-height:64px;line-height:1.5;';
+  ta.value=S.notes; ta.addEventListener('input',e=>{S.notes=e.target.value;}); nc.appendChild(ta); w.appendChild(nc);
+  // GENERATE
+  const gb2=d('button',`width:100%;background:${S.loading?'#090e1a':'linear-gradient(135deg,#1d4ed8,#7c3aed)'};border:${S.loading?'1px solid #1f2937':'none'};border-radius:13px;padding:17px;color:${S.loading?'#374151':'#fff'};font-size:15px;font-weight:700;letter-spacing:.05em;margin-bottom:8px;`);
+  gb2.textContent=S.loading?'⏳  Building your plan...':'→  Generate Today\'s Plan';
+  if(!S.loading) gb2.onclick=genPlan; w.appendChild(gb2);
+  const hint=d('div','text-align:center;font-size:10px;color:#1f2937;margin-bottom:10px;'); hint.textContent='Open in Chrome or Safari — not a file manager.'; w.appendChild(hint);
+
+  // ── PROGRAM / GOAL UPDATE BUTTON ──
+  const prog=activeProgram();
+  const pgBtn=d('button','width:100%;background:#0b1120;border:1px solid #334155;border-radius:13px;padding:13px;color:#94a3b8;font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;');
+  pgBtn.innerHTML=`<span style="font-size:16px;">⚡</span> ${prog?'Update Program / Goals':'Set Program Goals'}`;
+  pgBtn.onclick=()=>{S.showGoalModal=true;render();};
+  w.appendChild(pgBtn);
+  if(prog){
+    const pgNote=d('div','background:#0b1120;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-bottom:10px;');
+    pgNote.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.15em;margin-bottom:3px;">ACTIVE CONTEXT · ${prog.date}</div><div style="font-size:11px;color:#94a3b8;line-height:1.4;">"${prog.trigger}"</div>`;
+    w.appendChild(pgNote);
+  }
+  if(S.error){
+    const eb=d('div','color:#ef4444;font-size:12px;padding:14px;background:#1a0808;border-radius:10px;border:1px solid #7f1d1d;line-height:1.6;');
+    eb.innerHTML=`<strong>Could not generate plan.</strong><br><br>Must be opened via a live URL (GitHub + Netlify).<br><br><span style="color:#6b7280;font-size:10px;">${S.error}</span>`;
+    w.appendChild(eb);
+  }
+  return w;
+}
+
+// ── PLAN ──────────────────────────────────────────────────────────────────────
+function mkPlan(){
+  const w=d('div',''); const p=S.plan;
+  if(!p){
+    const e=d('div','text-align:center;padding:60px 0;');
+    e.innerHTML=`<div style="font-size:36px;margin-bottom:12px;">📋</div><p style="color:#4b5563;font-size:14px;margin-bottom:16px;">No plan yet — complete your check-in first.</p>`;
+    const b=d('button','background:#111827;border:1px solid #1f2937;color:#e2e8f0;padding:10px 20px;border-radius:8px;font-size:12px;');
+    b.textContent='Go to Check-In'; b.onclick=()=>{S.screen='checkin';render();}; e.appendChild(b); w.appendChild(e); return w;
+  }
+  const rc=RCOL[p.readiness]||'#475569',rb=RBG[p.readiness]||'#0b1120',dl=daysLeft();
+  const allB=[...(p.blocks||[]),p.elbow_block].filter(Boolean);
+  const totEx=allB.reduce((n,b)=>n+(b.exercises?.length||0),0);
+  const done=Object.values(S.ticked).filter(Boolean).length;
+  const prog=totEx>0?Math.round((done/totEx)*100):0;
+  // Banner
+  const ban=d('div',`background:${rb};border:1px solid ${rc}40;border-radius:14px;padding:16px 18px;margin-bottom:14px;display:flex;gap:14px;align-items:flex-start;`);
+  const sc=d('div',`width:52px;height:52px;border-radius:50%;background:${rc}20;border:2px solid ${rc};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:${rc};flex-shrink:0;`);
+  sc.textContent=String(p.readiness_score);
+  const bt=d('div','flex:1;');
+  bt.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${rc};box-shadow:0 0 6px ${rc};"></span><span style="font-size:11px;font-weight:700;color:${rc};letter-spacing:.15em;">${p.readiness} DAY</span><span style="font-size:10px;color:#374151;">· ${p.phase} · ${p.duration_mins} min</span></div><div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:4px;">${p.session_title}</div><div style="font-size:11px;color:#6b7280;line-height:1.5;">${p.readiness_reason}</div>`;
+  ban.appendChild(sc); ban.appendChild(bt); w.appendChild(ban);
+  // Coach
+  const cn=d('div','background:#0b1120;border-left:3px solid #7c3aed;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:12px;');
+  cn.innerHTML=`<div style="font-size:9px;color:#7c3aed;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">COACH</div><p style="font-size:12px;color:#9ca3af;line-height:1.6;margin:0;">${p.coach_note}</p>`;
+  w.appendChild(cn);
+  // 2col
+  const tc=d('div','display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;');
+  const s1=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:12px;');
+  s1.innerHTML=`<div style="font-size:9px;color:#0ea5e9;letter-spacing:.15em;font-weight:700;margin-bottom:5px;">🌊 SURF / 🥋 BJJ</div><p style="font-size:11px;color:#9ca3af;line-height:1.5;margin:0;">${p.surf_bjj_note}</p>`;
+  const s2=d('div','background:#1a0808;border:1px solid #7f1d1d;border-radius:10px;padding:12px;');
+  s2.innerHTML=`<div style="font-size:9px;color:#ef4444;letter-spacing:.15em;font-weight:700;margin-bottom:5px;">⚕️ ${dl}d to surgery</div><p style="font-size:11px;color:#fca5a5;line-height:1.5;margin:0;">${p.surgery_note}</p>`;
+  tc.appendChild(s1); tc.appendChild(s2); w.appendChild(tc);
+  // Progress
+  if(totEx>0){
+    const pg=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:12px 16px;margin-bottom:14px;');
+    pg.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;color:#4b5563;letter-spacing:.1em;">SESSION PROGRESS</span><span style="font-size:11px;font-weight:700;color:${prog===100?'#22c55e':'#9ca3af'};">${done}/${totEx}</span></div><div style="height:4px;background:#1f2937;border-radius:2px;"><div style="height:100%;width:${prog}%;background:${prog===100?'#22c55e':'#22d3ee'};border-radius:2px;transition:width .3s;"></div></div>`;
+    w.appendChild(pg);
+  }
+  if(p.warmup){
+    const wu=d('div','background:#0b1120;border-left:3px solid #22d3ee;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:10px;');
+    wu.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">WARM-UP</div><p style="font-size:12px;color:#9ca3af;margin:0;line-height:1.5;">${p.warmup}</p>`;
+    w.appendChild(wu);
+  }
+  (p.blocks||[]).forEach((blk,bi)=>w.appendChild(mkBlock(blk,`b${bi}`,'#22d3ee',`BLOCK ${bi+1} · ${(blk.title||'').toUpperCase()}`,'#0b1120','#111827',false,`block_${bi}`)));
+  if(p.elbow_block) w.appendChild(mkBlock(p.elbow_block,'elbow','#4ade80','🩹 DAILY ELBOW REHAB','#060f06','#14532d',true,'elbow_rehab'));
+  if(p.cooldown){
+    const cd=d('div','background:#0b1120;border-left:3px solid #374151;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:14px;');
+    cd.innerHTML=`<div style="font-size:9px;color:#374151;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">COOL-DOWN</div><p style="font-size:12px;color:#4b5563;margin:0;line-height:1.5;">${p.cooldown}</p>`;
+    w.appendChild(cd);
+  }
+  // Post-session notes — always editable, even after completion
+  const psnCard=d('div','background:#0d1117;border:1px solid #7c3aed40;border-radius:12px;padding:16px;margin-bottom:14px;');
+  psnCard.innerHTML=`<div style="font-size:10px;color:#7c3aed;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">POST-SESSION NOTES</div><div style="font-size:11px;color:#475569;margin-bottom:6px;line-height:1.5;">How did it go? Pain, fatigue, loads — feeds into tomorrow's plan.</div>`;
+  const psnTa=document.createElement('textarea'); psnTa.className='sn-ta';
+  psnTa.placeholder='e.g. Elbow 2/10 on rows, squats strong at 70kg, right shoulder clicked, energy dropped mid-session...';
+  psnTa.value=S.postSessionNote||'';
+  psnTa.addEventListener('input',e=>{ S.postSessionNote=e.target.value; S.log=S.log.map(l=>l.date===todayKey()?{...l,postSessionNote:e.target.value}:l); saveLog(); });
+  psnCard.appendChild(psnTa); w.appendChild(psnCard);
+
+  const cb=d('button',`width:100%;background:${S.sessionDone?'#052e16':'linear-gradient(135deg,#15803d,#0f766e)'};border:${S.sessionDone?'1px solid #14532d':'none'};border-radius:12px;padding:15px;color:${S.sessionDone?'#4ade80':'#fff'};font-size:14px;font-weight:700;margin-bottom:8px;`);
+  cb.textContent=S.sessionDone?'✓  Session logged':'Mark session complete';
+  if(!S.sessionDone) cb.onclick=markDone; w.appendChild(cb);
+
+  // Edit session button — always visible once logged, lets you add more work or amend notes
+  if(S.sessionDone){
+    const editRow=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;');
+
+    const editBtn=d('button','background:#0b1120;border:1px solid #334155;border-radius:10px;padding:12px;color:#94a3b8;font-size:12px;font-weight:700;');
+    editBtn.innerHTML='✎  Edit / Add to Session';
+    editBtn.onclick=()=>{
+      // Reopen session for editing — keeps it logged but unlocks all note fields
+      S.sessionDone=false; S.feedback=null; render();
+    };
+
+    const relogBtn=d('button','background:#052e16;border:1px solid #14532d;border-radius:10px;padding:12px;color:#4ade80;font-size:12px;font-weight:700;');
+    relogBtn.innerHTML='✓  Re-log Session';
+    relogBtn.style.display='none'; // only shows when editing
+
+    editRow.appendChild(editBtn);
+    w.appendChild(editRow);
+
+    // Feedback button
+    const fbBtn=d('button',`width:100%;background:${S.feedbackLoading?'#090e1a':'#0d1117'};border:1px solid #7c3aed60;border-radius:12px;padding:15px;color:${S.feedbackLoading?'#374151':'#a78bfa'};font-size:14px;font-weight:700;margin-bottom:8px;`);
+    fbBtn.textContent=S.feedbackLoading?'⏳  Analysing session...':'📊  Session Feedback & Next Session Preview';
+    if(!S.feedbackLoading) fbBtn.onclick=genFeedback;
+    w.appendChild(fbBtn);
+    if(S.feedback){
+      const fbPreview=d('div','background:#0d1117;border:1px solid #7c3aed40;border-radius:10px;padding:12px 16px;margin-bottom:8px;cursor:pointer;');
+      fbPreview.innerHTML=`<div style="font-size:9px;color:#a78bfa;letter-spacing:.2em;font-weight:700;margin-bottom:5px;">FEEDBACK READY — tap to view</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${S.feedback.headline||''}</div>`;
+      fbPreview.onclick=()=>{S.showFeedbackModal=true;render();};
+      w.appendChild(fbPreview);
+    }
+  }
+  return w;
+}
+
+function mkBlock(blk,prefix,accent,hdr,bg,border,isElbow,blockKey){
+  const w=d('div',`background:${bg};border:1px solid ${border};border-radius:12px;margin-bottom:10px;overflow:hidden;`);
+  const h=d('div',`padding:11px 16px;border-bottom:1px solid ${isElbow?'#052e16':'#0d1117'};display:flex;justify-content:space-between;align-items:center;`);
+  const ht=d('span',`font-size:10px;font-weight:700;color:${accent};letter-spacing:.15em;`); ht.textContent=hdr; h.appendChild(ht);
+  if(isElbow){const ns=d('span','font-size:9px;color:#14532d;letter-spacing:.1em;');ns.textContent='NEVER SKIP';h.appendChild(ns);}
+  w.appendChild(h);
+  (blk.exercises||[]).forEach((ex,ei)=>{
+    const key=`${prefix}e${ei}`,done=!!S.ticked[key];
+    const row=d('div',`padding:13px 16px;border-bottom:1px solid ${isElbow?'#052e16':'#0d1117'};cursor:pointer;display:flex;gap:12px;align-items:flex-start;background:${done?(isElbow?'#052e16':'#071a07'):'transparent'};transition:background .2s;`);
+    const chk=d('div',`width:20px;height:20px;border-radius:4px;flex-shrink:0;margin-top:2px;border:1.5px solid ${done?'#22c55e':'#1f2937'};background:${done?'#22c55e':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;`);
+    chk.textContent=done?'✓':'';
+    const tx=d('div',`flex:1;opacity:${done?.45:1};`);
+    tx.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:3px;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${ex.name}</span><span style="font-size:10px;color:${accent};background:${accent}14;padding:1px 7px;border-radius:4px;">${ex.sets}</span>${ex.load?`<span style="font-size:10px;color:#f59e0b;background:#f59e0b12;padding:1px 7px;border-radius:4px;">${ex.load}</span>`:''}</div>${ex.notes?`<div style="font-size:11px;color:${isElbow?'#4ade8060':'#4b5563'};line-height:1.5;">${ex.notes}</div>`:''}`;
+    row.appendChild(chk); row.appendChild(tx); row.onclick=()=>{S.ticked[key]=!S.ticked[key];render();}; w.appendChild(row);
+  });
+  if(blockKey){
+    const nw=d('div',`padding:12px 16px;background:${isElbow?'#040d04':'#090e1a'};border-top:1px solid ${isElbow?'#052e16':'#111827'};`);
+    const nl=d('div',`font-size:9px;color:${isElbow?'#14532d':accent+'80'};letter-spacing:.15em;font-weight:700;margin-bottom:6px;`); nl.textContent='NOTES'; nw.appendChild(nl);
+    const nta=document.createElement('textarea'); nta.className='sn-ta'; nta.style.minHeight='48px'; nta.style.fontSize='11px';
+    nta.placeholder=isElbow?'Pain level, which movements aggravated...':'Loads, how it felt, any pain...';
+    nta.value=S.blockNotes[blockKey]||'';
+    nta.addEventListener('input',e=>{ S.blockNotes[blockKey]=e.target.value; S.log=S.log.map(l=>l.date===todayKey()?{...l,blockNotes:{...(l.blockNotes||{}),[blockKey]:e.target.value}}:l); saveLog(); });
+    nw.appendChild(nta); w.appendChild(nw);
+  }
+  return w;
+}
+
+// ── NUTRITION ─────────────────────────────────────────────────────────────────
+function mkNutrition(){
+  const w=d('div','');
+  const nut=S.nut;
+  const ptarget=proteinTarget();
+  const totalP=Math.round(nut.foods.reduce((s,f)=>s+f.protein,0));
+  const totalK=Math.round(nut.foods.reduce((s,f)=>s+f.calories,0));
+  const pPct=Math.min(100,Math.round((totalP/ptarget)*100));
+  const remaining=Math.max(0,ptarget-totalP);
+
+  // Header
+  const hdr=d('div','margin-bottom:20px;');
+  hdr.innerHTML=`<p style="font-size:10px;letter-spacing:.25em;color:#374151;margin-bottom:6px;font-family:monospace;">${todayLabel()}</p><h2 style="font-size:24px;font-weight:700;">Nutrition</h2><p style="font-size:11px;color:#4b5563;margin-top:4px;">Carnivore · Intermittent Fasting · ${ptarget}g protein target (2g/kg)</p>`;
+  w.appendChild(hdr);
+
+  // FASTING WINDOW
+  const fc=mkCard('#f59e0b','FASTING WINDOW');
+  const now=Date.now();
+  if(!nut.eatStart){
+    // Currently fasting
+    const fastDur=nut.eatEnd?durStr(now-new Date(nut.eatEnd).getTime()):'—';
+    const fi=d('div','text-align:center;padding:8px 0 16px;');
+    fi.innerHTML=`<div style="font-size:11px;color:#f59e0b;letter-spacing:.1em;margin-bottom:6px;">CURRENTLY FASTING</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">${fastDur}</div>${nut.eatEnd?`<div style="font-size:10px;color:#475569;margin-top:4px;">Since last ate: ${new Date(nut.eatEnd).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}</div>`:''}`;
+    fc.appendChild(fi);
+    const bb=d('button','width:100%;background:#f59e0b;border:none;border-radius:10px;padding:13px;color:#000;font-size:14px;font-weight:700;');
+    bb.textContent='🍴  Break Fast — Start Eating';
+    bb.onclick=()=>{ S.nut={...nut,eatStart:new Date().toISOString()}; saveNut(todayKey(),S.nut); render(); };
+    fc.appendChild(bb);
+  } else if(!nut.eatEnd){
+    // Currently eating
+    const eatDur=durStr(now-new Date(nut.eatStart).getTime());
+    const fi=d('div','text-align:center;padding:8px 0 16px;');
+    fi.innerHTML=`<div style="font-size:11px;color:#22c55e;letter-spacing:.1em;margin-bottom:6px;">EATING WINDOW OPEN</div><div style="font-size:32px;font-weight:900;color:#22c55e;">${eatDur}</div><div style="font-size:10px;color:#475569;margin-top:4px;">Started eating: ${new Date(nut.eatStart).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}</div>`;
+    fc.appendChild(fi);
+    const bb=d('button','width:100%;background:#22c55e;border:none;border-radius:10px;padding:13px;color:#000;font-size:14px;font-weight:700;');
+    bb.textContent='⏹  Done Eating — Start Fast';
+    bb.onclick=()=>{ S.nut={...nut,eatEnd:new Date().toISOString()}; saveNut(todayKey(),S.nut); render(); };
+    fc.appendChild(bb);
+  } else {
+    // Both set — show summary
+    const eatDur=durStr(new Date(nut.eatEnd)-new Date(nut.eatStart));
+    const fi=d('div','text-align:center;padding:8px 0 12px;');
+    fi.innerHTML=`<div style="font-size:11px;color:#22c55e;letter-spacing:.1em;margin-bottom:4px;">EATING WINDOW COMPLETE</div><div style="font-size:28px;font-weight:900;color:#22c55e;">${eatDur}</div><div style="font-size:10px;color:#475569;margin-top:4px;">${new Date(nut.eatStart).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})} → ${new Date(nut.eatEnd).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}</div>`;
+    fc.appendChild(fi);
+    const rst=d('button','width:100%;background:transparent;border:1px solid #1f2937;border-radius:10px;padding:10px;color:#4b5563;font-size:12px;');
+    rst.textContent='Reset for today'; rst.onclick=()=>{ S.nut={...nut,eatStart:null,eatEnd:null}; saveNut(todayKey(),S.nut); render(); };
+    fc.appendChild(rst);
+  }
+  w.appendChild(fc);
+
+  // DAILY PROGRESS
+  const dc=mkCard('#22d3ee','DAILY PROTEIN TARGET');
+  dc.innerHTML+=``;
+  const pRow=d('div','margin-bottom:14px;');
+  pRow.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${totalP}g protein</span><span style="font-size:12px;color:${pPct>=100?'#22c55e':'#94a3b8'};">${pPct>=100?'✓ TARGET MET':`${remaining}g to go`}</span></div><div style="height:8px;background:#1f2937;border-radius:4px;margin-bottom:4px;"><div style="height:100%;width:${pPct}%;background:${pPct>=100?'#22c55e':'#22d3ee'};border-radius:4px;transition:width .3s;"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:#475569;"><span>0g</span><span>Target: ${ptarget}g</span></div>`;
+  dc.appendChild(pRow);
+  const kRow=d('div','');
+  kRow.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:#94a3b8;">${totalK} kcal logged</span><span style="font-size:10px;color:#475569;">Carnivore — protein is primary metric</span></div>`;
+  dc.appendChild(kRow);
+  // Protein suggestion if remaining
+  if(remaining>0&&FOODS.length>0){
+    const sugg=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-top:10px;');
+    sugg.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.15em;font-weight:700;margin-bottom:6px;">TO HIT TARGET — QUICK CALC</div>`;
+    [{name:'Rump Steak',p:26,k:175},{name:'Ground Beef 80/20',p:26,k:254},{name:'Chicken Breast',p:31,k:165},{name:'Eggs (×1 = 50g)',p:6.5,k:78}].forEach(f=>{
+      const g=Math.round(remaining/f.p*100);
+      const row=d('div','display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;padding:3px 0;');
+      row.innerHTML=`<span>${f.name}</span><span style="color:#22d3ee;font-weight:700;">${g}g = ${remaining}g protein</span>`;
+      sugg.appendChild(row);
+    });
+    dc.appendChild(sugg);
+  }
+  w.appendChild(dc);
+
+  // ADD FOOD + LOG
+  const flc=mkCard('#f97316','FOOD LOG');
+  const addFoodBtn=d('button','width:100%;background:linear-gradient(135deg,#c2410c,#f97316);border:none;border-radius:10px;padding:13px;color:#fff;font-size:14px;font-weight:700;margin-bottom:14px;');
+  addFoodBtn.textContent='+ Add Food Entry';
+  addFoodBtn.onclick=()=>{ S.showAddFood=true; S.selFood=null; S.foodSearch=''; S.foodCat='All'; S.foodGrams=300; render(); };
+  flc.appendChild(addFoodBtn);
+  if(nut.foods.length===0){
+    const empty=d('div','text-align:center;padding:16px;font-size:12px;color:#374151;'); empty.textContent='No food logged yet today.'; flc.appendChild(empty);
+  } else {
+    nut.foods.forEach((entry,i)=>{
+      const row=d('div','display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #0d1117;position:relative;');
+      row.innerHTML=`<div style="font-size:10px;color:#475569;font-family:monospace;min-width:36px;padding-top:2px;">${entry.time}</div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:2px;">${entry.foodName}</div><div style="display:flex;gap:10px;font-size:11px;"><span style="color:#22d3ee;">${entry.grams}g</span><span style="color:#22c55e;font-weight:700;">+${Math.round(entry.protein)}g protein</span><span style="color:#475569;">${Math.round(entry.calories)} kcal</span></div></div>`;
+      const del=d('button','background:transparent;border:none;color:#374151;font-size:14px;padding:2px 4px;');
+      del.textContent='✕'; del.onclick=()=>{ const foods=nut.foods.filter((_,j)=>j!==i); S.nut={...nut,foods}; saveNut(todayKey(),S.nut); render(); };
+      row.appendChild(del); flc.appendChild(row);
+    });
+    // Totals row
+    const trow=d('div','display:flex;gap:10px;padding:10px 0;');
+    trow.innerHTML=`<div style="min-width:36px;"></div><div style="flex:1;"><div style="font-size:11px;color:#94a3b8;font-weight:700;">TOTAL: <span style="color:#22c55e;">${totalP}g protein</span> · <span style="color:#475569;">${totalK} kcal</span></div></div>`;
+    flc.appendChild(trow);
+  }
+  w.appendChild(flc);
+
+  // SUPPLEMENTS
+  const sc2=mkCard('#a78bfa','DAILY SUPPLEMENTS');
+  const suppNote=d('div','font-size:11px;color:#475569;margin-bottom:14px;line-height:1.5;'); suppNote.textContent='Tap any supplement for dosing rationale. Tick when taken.'; sc2.appendChild(suppNote);
+  SUPPS.forEach(s=>{
+    const checked=!!(nut.supps&&nut.supps[s.key]);
+    const row=d('div','display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #0d1117;cursor:pointer;');
+    const chk=d('div',`width:22px;height:22px;border-radius:5px;flex-shrink:0;border:1.5px solid ${checked?s.color:'#1f2937'};background:${checked?s.color:'transparent'};display:flex;align-items:center;justify-content:center;font-size:13px;color:#000;`);
+    chk.textContent=checked?'✓':'';
+    const info=d('div','flex:1;');
+    info.innerHTML=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${s.name}</span><span style="font-size:10px;color:${s.color};background:${s.color}18;padding:1px 7px;border-radius:4px;">${s.dose}</span></div><div style="font-size:10px;color:#475569;margin-top:2px;">${s.timing}</div>`;
+    const inf=d('button','background:transparent;border:none;color:#334155;font-size:16px;padding:2px 6px;'); inf.textContent='ℹ';
+    inf.onclick=e=>{ e.stopPropagation(); S.suppDetail=s; render(); };
+    row.appendChild(chk); row.appendChild(info); row.appendChild(inf);
+    row.onclick=()=>{
+      const supps={...(nut.supps||{}),[s.key]:!checked};
+      S.nut={...nut,supps}; saveNut(todayKey(),S.nut); render();
+    };
+    sc2.appendChild(row);
+  });
+  w.appendChild(sc2);
+  return w;
+}
+
+// ── ADD FOOD MODAL ────────────────────────────────────────────────────────────
+function mkAddFoodModal(){
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=e=>{if(e.target===bg){S.showAddFood=false;render();}};
+  const m=d('div',''); m.className='modal';
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;');
+  mh.innerHTML=`<h3 style="font-size:16px;font-weight:700;">Add Food</h3>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showAddFood=false;render();}; mh.appendChild(cl); m.appendChild(mh);
+  // Search
+  const si=document.createElement('input'); si.type='text'; si.placeholder='Search foods...';
+  si.value=S.foodSearch||'';
+  si.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;margin-bottom:12px;';
+  si.addEventListener('input',e=>{S.foodSearch=e.target.value;renderFoodList(m);}); m.appendChild(si);
+  // Category filter
+  const cats=d('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;');
+  FOOD_CATS.forEach(cat=>{
+    const b=d('button',''); b.className=`food-chip${S.foodCat===cat?' active':''}`;
+    b.textContent=cat; b.onclick=()=>{S.foodCat=cat;renderFoodList(m);}; cats.appendChild(b);
+  });
+  m.appendChild(cats);
+  // Food list container
+  const fl=d('div',''); fl.id='food-list'; m.appendChild(fl);
+  renderFoodList(m);
+  bg.appendChild(m); return bg;
+}
+
+function renderFoodList(modal){
+  let fl=modal.querySelector('#food-list');
+  if(!fl){ fl=d('div',''); fl.id='food-list'; modal.appendChild(fl); }
+  fl.innerHTML='';
+  const q=(S.foodSearch||'').toLowerCase();
+  const filtered=FOODS.filter(f=>{
+    const matchCat=S.foodCat==='All'||f.cat===S.foodCat;
+    const matchQ=!q||f.name.toLowerCase().includes(q);
+    return matchCat&&matchQ;
+  });
+  filtered.slice(0,20).forEach(food=>{
+    const sel=S.selFood&&S.selFood.name===food.name;
+    const isCount=!!food.countMode;
+    // Calculate preview values
+    const pPer = isCount
+      ? Math.round(food.p * S.foodCount)
+      : Math.round(food.p * S.foodGrams / 100);
+    const kPer = isCount
+      ? Math.round(food.k * S.foodCount)
+      : Math.round(food.k * S.foodGrams / 100);
+
+    const fi=d('div',''); fi.className=`food-item${sel?' selected':''}`;
+    fi.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;font-weight:${sel?700:400};color:${sel?'#22d3ee':'#f1f5f9'};">${food.name}</span>
+      <div style="display:flex;gap:6px;font-size:10px;">
+        <span style="color:#22c55e;">${isCount?food.p+'g P/'+food.unit:food.p+'g P/100g'}</span>
+        ${food.note?`<span style="color:#374151;">${food.note}</span>`:''}
+        <span style="color:#475569;font-family:monospace;">${food.cat}</span>
+      </div>
+    </div>`;
+
+    if(sel){
+      const inner=d('div','margin-top:10px;padding-top:10px;border-top:1px solid #1f2937;');
+
+      if(isCount){
+        // ── EGG COUNT STEPPER ──
+        const countRow=d('div','display:flex;align-items:center;gap:12px;margin-bottom:12px;justify-content:center;');
+        const dn=d('button',''); dn.className='step-btn'; dn.textContent='−';
+        dn.onclick=e2=>{ e2.stopPropagation(); S.foodCount=Math.max(1,S.foodCount-1); renderFoodList(modal); };
+        const val=d('div','min-width:60px;text-align:center;');
+        val.innerHTML=`<div style="font-size:28px;font-weight:900;color:#22d3ee;">${S.foodCount}</div><div style="font-size:11px;color:#475569;">${food.unitLabel||food.unit+'s'}</div>`;
+        const up=d('button',''); up.className='step-btn'; up.textContent='+';
+        up.onclick=e2=>{ e2.stopPropagation(); S.foodCount=Math.min(24,S.foodCount+1); renderFoodList(modal); };
+        countRow.appendChild(dn); countRow.appendChild(val); countRow.appendChild(up);
+        inner.appendChild(countRow);
+      } else {
+        // ── GRAMS INPUT ──
+        const gr=d('div','display:flex;align-items:center;gap:10px;margin-bottom:12px;');
+        const gi=document.createElement('input');
+        gi.type='number'; gi.min=1; gi.max=2000; gi.value=S.foodGrams; gi.className='num-inp';
+        gi.style.cssText='color:#f97316;border-color:#f9741650;width:90px;font-size:18px;';
+        // Stop ALL events bubbling from the input to the food item click handler
+        ['click','touchstart','touchend','mousedown','focus','pointerdown'].forEach(ev=>
+          gi.addEventListener(ev, e2=>e2.stopPropagation())
+        );
+        gi.addEventListener('input',e2=>{
+          e2.stopPropagation();
+          S.foodGrams=parseInt(e2.target.value)||0;
+          // Update preview without full re-render so input keeps focus
+          const pv2=modal.querySelector('#food-preview');
+          if(pv2){
+            const p2=Math.round(food.p*S.foodGrams/100);
+            const k2=Math.round(food.k*S.foodGrams/100);
+            pv2.innerHTML=`<span style="font-size:20px;font-weight:700;color:#22c55e;">+${p2}g protein</span>  <span style="font-size:14px;color:#475569;">${k2} kcal</span>`;
+          }
+        });
+        gi.addEventListener('change',e2=>e2.stopPropagation());
+        const gl=d('span','font-size:14px;color:#475569;'); gl.textContent='g cooked weight';
+        gr.appendChild(gi); gr.appendChild(gl);
+        inner.appendChild(gr);
+      }
+
+      // Preview
+      const pv=d('div','background:#0a0f1a;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center;');
+      pv.id='food-preview';
+      pv.innerHTML=`<span style="font-size:20px;font-weight:700;color:#22c55e;">+${pPer}g protein</span>  <span style="font-size:14px;color:#475569;">${kPer} kcal</span>`;
+      inner.appendChild(pv);
+
+      const addBtn=d('button','width:100%;background:linear-gradient(135deg,#15803d,#0f766e);border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:700;');
+      addBtn.textContent='Add to Log';
+      addBtn.onclick=e2=>{
+        e2.stopPropagation();
+        // Re-read gram input value directly in case preview wasn't re-rendered
+        const grInput=pv.parentElement?.querySelector('input[type=number]');
+        if(grInput&&!isCount) S.foodGrams=parseInt(grInput.value)||S.foodGrams;
+        const currentP = isCount ? Math.round(food.p*S.foodCount) : Math.round(food.p*S.foodGrams/100);
+        const currentK = isCount ? Math.round(food.k*S.foodCount) : Math.round(food.k*S.foodGrams/100);
+        const displayQty = isCount
+          ? `${S.foodCount} ${food.unitLabel||food.unit+'s'}`
+          : `${S.foodGrams}g`;
+        const entry={
+          id:Date.now(), time:timeNow(),
+          foodName:`${food.name} (${displayQty})`,
+          grams: isCount ? S.foodCount*(food.name.toLowerCase().includes('white')?30:58) : S.foodGrams,
+          protein:currentP, calories:currentK,
+          displayQty,
+        };
+        const foods=[...(S.nut.foods||[]),entry];
+        S.nut={...S.nut,foods}; saveNut(todayKey(),S.nut); S.showAddFood=false; render();
+      };
+      inner.appendChild(addBtn);
+      inner.onclick=e2=>e2.stopPropagation();
+      fi.appendChild(inner);
+    }
+    fi.onclick=e2=>{ if(!sel){ e2.stopPropagation(); S.selFood=food; S.foodCount=4; renderFoodList(modal); }};
+    fl.appendChild(fi);
+  });
+  if(filtered.length===0){
+    const none=d('div','text-align:center;padding:20px;font-size:13px;color:#374151;'); none.textContent='No foods found.'; fl.appendChild(none);
+  }
+}
+
+// ── SUPPLEMENT DETAIL MODAL ───────────────────────────────────────────────────
+function mkSuppDetail(){
+  const s=S.suppDetail;
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=()=>{S.suppDetail=null;render();};
+  const m=d('div',''); m.className='modal';
+  m.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="font-size:16px;font-weight:700;color:${s.color};">${s.name}</h3>
+      <button onclick="S.suppDetail=null;render();" style="background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;">×</button>
+    </div>
+    <div style="background:#090e1a;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:10px;color:#475569;letter-spacing:.1em;margin-bottom:4px;">DOSE</div>
+      <div style="font-size:18px;font-weight:700;color:${s.color};">${s.dose}</div>
+    </div>
+    <div style="background:#090e1a;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:10px;color:#475569;letter-spacing:.1em;margin-bottom:4px;">TIMING</div>
+      <div style="font-size:15px;color:#e2e8f0;">${s.timing}</div>
+    </div>
+    <div style="background:#090e1a;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:10px;color:#475569;letter-spacing:.1em;margin-bottom:6px;">WHY IT MATTERS FOR YOU</div>
+      <div style="font-size:13px;color:#94a3b8;line-height:1.6;">${s.why}</div>
+    </div>`;
+  // Pre-surgery specific note
+  const notes={
+    creatine:'Start loading NOW before April 24. Research shows creatine supplementation before surgery significantly reduces muscle loss during the immobilisation period post-op. 5g daily is a maintenance dose — no loading phase needed.',
+    omega3:'3-4g EPA+DHA daily. Reduce to 1g in the week before surgery (minor blood thinning consideration — check with surgeon). Resume at full dose immediately post-op.',
+    vitD3:'Most Australians, especially shift workers with limited sun exposure, are deficient. Get levels tested if you can. Pre-surgical D3 levels directly correlate with healing speed.',
+    vitK2:'Essential companion to D3. Without K2, supplemental calcium from D3 can deposit in arteries instead of bones. MK-7 form has the longest half-life — once daily is sufficient.',
+    magnesium:'Glycinate form is best tolerated and most bioavailable. Particularly important for shift workers — supports circadian rhythm regulation and reduces cortisol. Take with the last meal of your eating window.',
+    collagen:'The timing is critical. Vitamin C is needed for collagen synthesis. Take 30-60 min before training to flood the joint with amino acids during the loading window. Particularly beneficial for the elbow tendon.',
+    zinc:'Important: zinc competes with iron for absorption. Take with a meal but not your highest-iron meal (usually a red meat meal). Zinc is depleted quickly during tissue repair post-surgery — priority supplement.',
+  };
+  if(notes[s.key]){
+    const pn=d('div','background:#0a0f1a;border:1px solid #1f2937;border-radius:10px;padding:14px;border-left:3px solid '+s.color+';');
+    pn.innerHTML=`<div style="font-size:9px;color:${s.color};letter-spacing:.15em;font-weight:700;margin-bottom:6px;">PRE-SURGERY PROTOCOL NOTE</div><div style="font-size:12px;color:#9ca3af;line-height:1.6;">${notes[s.key]}</div>`;
+    m.appendChild(pn);
+  }
+  bg.appendChild(m); return bg;
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function mkHistory(){
+  const w=d('div',''); const dl=daysLeft();
+  const hrow=d('div','display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:10px;');
+  const htxt=d('div','flex:1;');
+  htxt.innerHTML=`<p style="font-size:10px;letter-spacing:.25em;color:#374151;margin-bottom:6px;">TRAINING LOG</p><h2 style="font-size:24px;font-weight:700;">Session History</h2><p style="font-size:11px;color:#4b5563;margin-top:4px;">${S.log.length} entries · ${dl} days to surgery</p>`;
+  const btnRow=d('div','display:flex;flex-direction:column;gap:6px;margin-top:4px;flex-shrink:0;');
+  const addBtn=d('button','background:linear-gradient(135deg,#1d4ed8,#7c3aed);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;');
+  addBtn.textContent='+ Add Entry'; addBtn.onclick=()=>{S.showAddModal=true;render();};
+  const expBtn=d('button','background:#0b1120;border:1px solid #1f2937;border-radius:10px;padding:10px 14px;color:#94a3b8;font-size:11px;font-weight:700;white-space:nowrap;');
+  expBtn.textContent='↓ Export Log';
+  expBtn.onclick=()=>{
+    const data=JSON.stringify(S.log,null,2);
+    const blob=new Blob([data],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`surf_bjj_log_${todayKey()}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+  btnRow.appendChild(addBtn); btnRow.appendChild(expBtn); hrow.appendChild(htxt); hrow.appendChild(btnRow); w.appendChild(hrow);
+  // Stats
+  if(S.log.length>0){
+    const aH=Math.round(S.log.reduce((s,e)=>s+(e.hrv||0),0)/S.log.length);
+    const aSl=(S.log.reduce((s,e)=>s+(e.sleepDec||e.sleep||0),0)/S.log.length).toFixed(1);
+    const wts=S.log.filter(e=>e.weight&&parseFloat(e.weight)>0);
+    const aWt=wts.length?(wts.reduce((s,e)=>s+parseFloat(e.weight),0)/wts.length).toFixed(1):'--';
+    const gr=S.log.filter(e=>e.readiness==='GREEN').length;
+    const rd=S.log.filter(e=>e.readiness==='RED').length;
+    const sg=d('div','display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;');
+    [{l:'Avg Sleep',v:`${aSl}h`,c:'#22d3ee'},{l:'Avg HRV',v:`${aH}ms`,c:'#a78bfa'},{l:'Avg Wt',v:`${aWt}kg`,c:'#f97316'},{l:'Green',v:gr,c:'#22c55e'},{l:'Red',v:rd,c:'#ef4444'},{l:'Total',v:S.log.length,c:'#94a3b8'}].forEach(s=>{
+      const st=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:12px;text-align:center;');
+      st.innerHTML=`<div style="font-size:18px;font-weight:700;color:${s.c};">${s.v}</div><div style="font-size:9px;color:#374151;letter-spacing:.08em;margin-top:2px;">${s.l.toUpperCase()}</div>`;
+      sg.appendChild(st);
+    }); w.appendChild(sg);
+  }
+  const sorted=[...S.log].sort((a,b)=>b.date.localeCompare(a.date));
+  const li=d('div','display:grid;gap:8px;');
+  sorted.slice(0,40).forEach(e=>{
+    const rc=RCOL[e.readiness]||'#475569';
+    const row=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:14px 16px;position:relative;');
+    const chips=[e.sleepStr||e.sleep+'h',`Score:${e.sleepScore||'?'}`,`RHR:${e.rhr}`,`HRV:${e.hrv}ms`,`E:${e.energy}/10`,e.bodyBattery?`BB:${e.bodyBattery}`:'',e.weight?`${e.weight}kg`:'',e.shift,e.gym].filter(Boolean);
+    row.innerHTML=`
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px;padding-right:24px;">
+        <div style="display:flex;gap:8px;align-items:center;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${rc};box-shadow:0 0 5px ${rc};flex-shrink:0;margin-top:1px;"></span><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${e.session_title||'Session'}</span></div>
+        <span style="font-size:10px;color:#374151;font-family:monospace;">${e.date}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:${e.postSessionNote||e.notes?'6px':'0'};">
+        ${chips.map(m=>`<span style="font-size:10px;color:#4b5563;background:#0d1117;padding:2px 7px;border-radius:4px;">${m}</span>`).join('')}
+      </div>
+      ${e.notes?`<div style="font-size:11px;color:#374151;margin-bottom:4px;line-height:1.4;font-style:italic;">AM: "${e.notes}"</div>`:''}
+      ${e.postSessionNote?`<div style="font-size:11px;color:#7c3aed90;line-height:1.4;font-style:italic;margin-top:4px;">Post: "${e.postSessionNote.slice(0,200)}${e.postSessionNote.length>200?'...':''}"</div>`:''}
+      ${e.completed?`<div style="font-size:11px;color:#22c55e;margin-top:5px;">✓ ${e.completed}</div>`:''}`;
+    const del=d('button','position:absolute;top:12px;right:12px;background:transparent;border:none;color:#374151;font-size:16px;padding:2px 6px;');
+    del.textContent='✕'; del.onclick=ev=>{ev.stopPropagation();if(confirm('Delete?')){S.log=S.log.filter(x=>x!==e);saveLog();render();}};
+    row.appendChild(del); li.appendChild(row);
+  });
+  w.appendChild(li);
+  if(S.log.length>0){
+    const cl=d('button','margin-top:20px;background:transparent;border:1px solid #1f2937;color:#4b5563;padding:10px 20px;border-radius:8px;font-size:11px;');
+    cl.textContent='Clear all history';
+    cl.onclick=()=>{if(confirm('Clear ALL history? Cannot be undone.')){S.log=[];saveLog();render();}};
+    w.appendChild(cl);
+  }
+  return w;
+}
+
+// ── ADD HISTORY MODAL ─────────────────────────────────────────────────────────
+function mkAddModal(){
+  const f=S.addForm;
+  const bg=d('div',''); bg.className='modal-bg'; bg.onclick=e=>{if(e.target===bg){S.showAddModal=false;render();}};
+  const m=d('div',''); m.className='modal';
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;');
+  mh.innerHTML=`<h3 style="font-size:16px;font-weight:700;">Add Past Entry</h3>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showAddModal=false;render();}; mh.appendChild(cl); m.appendChild(mh);
+  m.appendChild(secLbl('DATE'));
+  const di=document.createElement('input'); di.type='date'; di.value=f.date;
+  di.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;margin-bottom:14px;';
+  di.addEventListener('change',e=>{f.date=e.target.value;}); m.appendChild(di);
+  m.appendChild(secLbl('SLEEP'));
+  const slr=d('div','display:flex;gap:12px;align-items:center;margin-bottom:14px;');
+  slr.appendChild(mkStepW('Hours',f.sleepH,0,14,'#22d3ee',v=>{f.sleepH=v;render();}));
+  const sp=d('div','font-size:20px;color:#1f2937;padding-top:16px;'); sp.textContent=':'; slr.appendChild(sp);
+  slr.appendChild(mkStepW('Mins',f.sleepM,0,59,'#22d3ee',v=>{f.sleepM=v;render();}));
+  const tot=d('div','flex:1;text-align:right;padding-top:14px;font-size:14px;font-weight:700;color:#22d3ee;'); tot.textContent=sleepStr(f.sleepH,f.sleepM); slr.appendChild(tot); m.appendChild(slr);
+  m.appendChild(secLbl('GARMIN SLEEP SCORE'));
+  const gb=garminBand(f.sleepScore);
+  m.appendChild(mkSliderStepper(f.sleepScore,0,100,gb.color,v=>{f.sleepScore=v;render();},`${f.sleepScore} — ${gb.label}`));
+  m.appendChild(d('div','margin-bottom:14px;'));
+  const rC=f.rhr<=50?'#22c55e':f.rhr<=58?'#f59e0b':'#ef4444';
+  m.appendChild(secLbl('RESTING HEART RATE'));
+  m.appendChild(mkSliderStepper(f.rhr,35,90,rC,v=>{f.rhr=v;render();},`${f.rhr} bpm`));
+  m.appendChild(d('div','margin-bottom:14px;'));
+  const hC=f.hrv>=45?'#22c55e':f.hrv>=34?'#f59e0b':'#ef4444';
+  m.appendChild(secLbl('HRV'));
+  m.appendChild(mkSliderStepper(f.hrv,20,120,hC,v=>{f.hrv=v;render();},`${f.hrv} ms`));
+  m.appendChild(d('div','margin-bottom:14px;'));
+  m.appendChild(secLbl('ENERGY'));
+  const eg=d('div','display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-bottom:14px;');
+  for(let v=1;v<=10;v++){const col=v<=3?'#ef4444':v<=6?'#f59e0b':'#22c55e',a=f.energy===v;const b=d('button',`background:${a?col:'#090e1a'};border:1px solid ${a?col:'#1f2937'};border-radius:6px;padding:9px 0;color:${a?'#fff':'#374151'};font-size:12px;font-weight:700;`);b.textContent=String(v);b.onclick=()=>{f.energy=v;render();};eg.appendChild(b);}
+  m.appendChild(eg);
+  m.appendChild(secLbl('FASTED WEIGHT (kg)'));
+  const wr=d('div','display:flex;align-items:center;gap:10px;margin-bottom:14px;');
+  const wi=document.createElement('input'); wi.type='number'; wi.step='0.1'; wi.value=f.weight||''; wi.placeholder='0.0'; wi.className='num-inp'; wi.style.cssText='color:#f97316;border-color:#f9741650;'; wi.addEventListener('input',e=>{f.weight=e.target.value;});
+  const wu=d('span','font-size:14px;color:#475569;'); wu.textContent='kg'; wr.appendChild(wi); wr.appendChild(wu); m.appendChild(wr);
+  m.appendChild(secLbl('SHIFT'));
+  const sw=d('div','display:flex;flex-direction:column;gap:5px;margin-bottom:14px;');
+  SHIFTS.forEach(sh=>{const a=f.shift===sh.label;const b=d('button',`display:flex;justify-content:space-between;align-items:center;width:100%;padding:9px 12px;border-radius:8px;background:${a?'#f59e0b18':'#090e1a'};border:1px solid ${a?'#f59e0b':'#1f2937'};`);const lb=d('span',`font-size:12px;font-weight:${a?700:400};color:${a?'#f59e0b':'#4b5563'};`);lb.textContent=sh.label;const tm=d('span',`font-size:10px;color:${a?'#f59e0b80':'#374151'};font-family:monospace;`);tm.textContent=sh.times;b.appendChild(lb);b.appendChild(tm);b.onclick=()=>{f.shift=sh.label;render();};sw.appendChild(b);});
+  m.appendChild(sw);
+  m.appendChild(secLbl('GYM ACCESS'));
+  const gr=d('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;');
+  ['Home','Work','Both','None'].forEach(g=>{const a=f.gym===g;const b=d('button',`background:${a?'#22d3ee18':'#090e1a'};border:1px solid ${a?'#22d3ee':'#1f2937'};color:${a?'#22d3ee':'#4b5563'};padding:6px 12px;border-radius:20px;font-size:11px;font-weight:${a?700:400};`);b.textContent=g;b.onclick=()=>{f.gym=g;render();};gr.appendChild(b);});
+  m.appendChild(gr);
+  m.appendChild(secLbl('SPORT THAT DAY'));
+  const spr=d('div','display:flex;gap:8px;margin-bottom:14px;');
+  [['🌊 Surf','surf'],['🥋 BJJ','bjj']].forEach(([lbl,key])=>{const a=f[key];const b=d('button',`background:${a?'#0ea5e918':'#090e1a'};border:1px solid ${a?'#0ea5e9':'#1f2937'};color:${a?'#0ea5e9':'#4b5563'};padding:8px 16px;border-radius:20px;font-size:12px;font-weight:${a?700:400};`);b.textContent=lbl;b.onclick=()=>{f[key]=!f[key];render();};spr.appendChild(b);});
+  m.appendChild(spr);
+  m.appendChild(secLbl('SESSION DONE (optional)'));
+  const si=document.createElement('input'); si.type='text'; si.placeholder='e.g. Lower body strength, Surf + BJJ, Rest'; si.value=f.session_title||''; si.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;'; si.addEventListener('input',e=>{f.session_title=e.target.value;}); m.appendChild(si);
+  m.appendChild(secLbl('READINESS'));
+  const rrow=d('div','display:flex;gap:8px;margin-bottom:14px;');
+  ['GREEN','AMBER','RED'].forEach(r=>{const a=f.readiness===r,col=RCOL[r];const b=d('button',`background:${a?col+'22':'#090e1a'};border:1px solid ${a?col:'#1f2937'};color:${a?col:'#4b5563'};padding:8px 20px;border-radius:20px;font-size:12px;font-weight:${a?700:400};`);b.textContent=r;b.onclick=()=>{f.readiness=r;render();};rrow.appendChild(b);});
+  m.appendChild(rrow);
+  m.appendChild(secLbl('NOTES (optional)'));
+  const ta=document.createElement('textarea'); ta.placeholder='Any notes...'; ta.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:12px;resize:vertical;min-height:60px;line-height:1.5;margin-bottom:20px;'; ta.value=f.notes||''; ta.addEventListener('input',e=>{f.notes=e.target.value;}); m.appendChild(ta);
+  const sv=d('button','width:100%;background:linear-gradient(135deg,#15803d,#0f766e);border:none;border-radius:12px;padding:15px;color:#fff;font-size:14px;font-weight:700;');
+  sv.textContent='Save Entry';
+  sv.onclick=()=>{
+    const entry={date:f.date,sleepH:f.sleepH,sleepM:f.sleepM,sleepDec:sleepDec(f.sleepH,f.sleepM),sleepStr:sleepStr(f.sleepH,f.sleepM),sleepScore:f.sleepScore,rhr:f.rhr,hrv:f.hrv,energy:f.energy,weight:f.weight,shift:f.shift,gym:f.gym,surf:f.surf,bjj:f.bjj,session_title:f.session_title||'Manual entry',readiness:f.readiness,readiness_score:f.readiness==='GREEN'?80:f.readiness==='AMBER'?55:30,notes:f.notes,completed:f.session_title||null};
+    S.log=[...S.log.filter(e=>e.date!==f.date||e.session_title!==(f.session_title||'Manual entry')),entry];
+    saveLog(); S.addForm={date:todayKey(),sleepH:7,sleepM:0,sleepScore:75,rhr:52,hrv:55,energy:7,bodyBattery:'',weight:'',shift:'Day',gym:'Home',surf:false,bjj:false,session_title:'',readiness:'GREEN',notes:''};
+    S.showAddModal=false; S.screen='history'; render();
+  };
+  m.appendChild(sv); bg.appendChild(m); return bg;
+}
+
+// ── JOURNAL SCREEN ────────────────────────────────────────────────────────────
+function mkJournal(){
+  const w=d('div','');
+  const hrow=d('div','display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:10px;');
+  const htxt=d('div','flex:1;');
+  htxt.innerHTML=`<p style="font-size:10px;letter-spacing:.25em;color:#374151;margin-bottom:6px;">SESSION JOURNAL</p><h2 style="font-size:24px;font-weight:700;">BJJ & Surf Log</h2><p style="font-size:11px;color:#4b5563;margin-top:4px;">${S.journal.length} entries</p>`;
+  const btnCol=d('div','display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-top:4px;');
+  const bjjBtn=d('button','background:linear-gradient(135deg,#7f1d1d,#ef4444);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;');
+  bjjBtn.textContent='🥋 Add BJJ';
+  bjjBtn.onclick=()=>{S.jForm=freshBJJForm();S.showJournalModal=true;render();};
+  const surfBtn=d('button','background:linear-gradient(135deg,#0c4a6e,#0ea5e9);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;');
+  surfBtn.textContent='🌊 Add Surf';
+  surfBtn.onclick=()=>{S.jForm=freshSurfForm();S.showJournalModal=true;render();};
+  btnCol.appendChild(bjjBtn); btnCol.appendChild(surfBtn);
+  hrow.appendChild(htxt); hrow.appendChild(btnCol); w.appendChild(hrow);
+
+  if(S.journal.length===0){
+    const e=d('div','text-align:center;padding:50px 0;');
+    e.innerHTML=`<div style="font-size:36px;margin-bottom:12px;">📔</div><p style="color:#4b5563;line-height:1.8;">No journal entries yet.<br>Tap <strong style="color:#ef4444;">🥋 Add BJJ</strong> or <strong style="color:#0ea5e9;">🌊 Add Surf</strong> to start.</p>`;
+    w.appendChild(e); return w;
+  }
+
+  // Filter tabs
+  const ftabs=d('div','display:flex;gap:8px;margin-bottom:16px;');
+  ['All','BJJ','Surf'].forEach(f=>{
+    const a=(S.journalFilter||'All')===f;
+    const b=d('button',`background:${a?'#1e293b':'#090e1a'};border:1px solid ${a?'#334155':'#1f2937'};color:${a?'#e2e8f0':'#4b5563'};padding:7px 16px;border-radius:20px;font-size:11px;font-weight:${a?700:400};`);
+    b.textContent=f; b.onclick=()=>{S.journalFilter=f;render();}; ftabs.appendChild(b);
+  });
+  w.appendChild(ftabs);
+
+  const filter=S.journalFilter||'All';
+  const filtered=[...S.journal].filter(e=>filter==='All'||e.type===filter.toLowerCase()).sort((a,b)=>b.date.localeCompare(a.date));
+
+  filtered.forEach(entry=>{
+    const isBJJ=entry.type==='bjj';
+    const ac=isBJJ?'#ef4444':'#0ea5e9';
+    const card=d('div',`background:#0b1120;border:1px solid #111827;border-top:3px solid ${ac};border-radius:10px;padding:14px 16px;margin-bottom:10px;cursor:pointer;position:relative;`);
+    // Header
+    const ch=d('div','display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-right:24px;');
+    ch.innerHTML=`<div><div style="display:flex;gap:8px;align-items:center;margin-bottom:3px;"><span style="font-size:16px;">${isBJJ?'🥋':'🌊'}</span><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${entry.location||'Session'}</span></div><span style="font-size:10px;color:#374151;font-family:monospace;">${entry.date}</span></div>`;
+    card.appendChild(ch);
+    // Preview chips
+    const chips=d('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;');
+    if(isBJJ){
+      if(entry.techniques&&entry.techniques.length) chips.innerHTML+=`<span style="font-size:10px;color:${ac};background:${ac}18;padding:2px 8px;border-radius:4px;">${entry.techniques.length} technique${entry.techniques.length>1?'s':''}</span>`;
+      if(entry.rounds&&entry.rounds.length){
+        const w2=entry.rounds.filter(r=>r.result==='Win').length, l=entry.rounds.filter(r=>r.result==='Loss').length;
+        chips.innerHTML+=`<span style="font-size:10px;color:#22c55e;background:#22c55e18;padding:2px 8px;border-radius:4px;">${w2}W / ${l}L</span>`;
+      }
+      if(entry.drillNext) chips.innerHTML+=`<span style="font-size:10px;color:#a78bfa;background:#a78bfa18;padding:2px 8px;border-radius:4px;">Drill: ${entry.drillNext.slice(0,30)}${entry.drillNext.length>30?'...':''}</span>`;
+    } else {
+      if(entry.swellSize) chips.innerHTML+=`<span style="font-size:10px;color:${ac};background:${ac}18;padding:2px 8px;border-radius:4px;">${entry.swellSize}</span>`;
+      if(entry.wind)      chips.innerHTML+=`<span style="font-size:10px;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:4px;">${entry.wind}</span>`;
+      if(entry.rating)    chips.innerHTML+=`<span style="font-size:10px;color:#f59e0b;background:#f59e0b18;padding:2px 8px;border-radius:4px;">${entry.rating}/10</span>`;
+      if(entry.board)     chips.innerHTML+=`<span style="font-size:10px;color:#475569;background:#1e293b;padding:2px 8px;border-radius:4px;">${entry.board}</span>`;
+    }
+    card.appendChild(chips);
+    if(entry.sessionNotes){
+      const sn=d('div','font-size:11px;color:#475569;line-height:1.5;font-style:italic;');
+      sn.textContent=`"${entry.sessionNotes.slice(0,120)}${entry.sessionNotes.length>120?'...':''}"`;
+      card.appendChild(sn);
+    }
+    card.onclick=()=>{S.journalViewEntry=entry;render();};
+    // Delete
+    const del=d('button','position:absolute;top:12px;right:12px;background:transparent;border:none;color:#374151;font-size:16px;padding:2px 6px;');
+    del.textContent='✕'; del.onclick=e2=>{e2.stopPropagation();if(confirm('Delete this journal entry?')){S.journal=S.journal.filter(x=>x!==entry);saveJournal();render();}};
+    card.appendChild(del); w.appendChild(card);
+  });
+  return w;
+}
+
+// ── JOURNAL ENTRY VIEW MODAL ──────────────────────────────────────────────────
+function mkJournalView(){
+  const e=S.journalViewEntry;
+  const isBJJ=e.type==='bjj';
+  const ac=isBJJ?'#ef4444':'#0ea5e9';
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=ev=>{if(ev.target===bg){S.journalViewEntry=null;render();}};
+  const m=d('div',''); m.className='modal';
+
+  // Header
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;');
+  mh.innerHTML=`<div><div style="font-size:18px;margin-bottom:2px;">${isBJJ?'🥋':'🌊'} <strong>${e.location||'Session'}</strong></div><div style="font-size:11px;color:#374151;font-family:monospace;">${e.date}</div></div>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.journalViewEntry=null;render();}; mh.appendChild(cl); m.appendChild(mh);
+
+  if(isBJJ){
+    // Techniques
+    if(e.techniques&&e.techniques.length){
+      const tc=d('div','margin-bottom:18px;');
+      tc.innerHTML=`<div style="font-size:10px;color:${ac};letter-spacing:.2em;font-weight:700;margin-bottom:10px;">TECHNIQUES DRILLED</div>`;
+      e.techniques.forEach((t,i)=>{
+        const tb=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:10px;padding:12px;margin-bottom:8px;');
+        tb.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><span style="font-size:12px;font-weight:700;color:#f1f5f9;">${i+1}. ${t.name||'Technique'}</span><span style="font-size:10px;color:${ac};background:${ac}18;padding:1px 7px;border-radius:4px;">${t.position}</span></div>${t.keySteps?`<div style="font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:${t.notes?'6px':'0'};white-space:pre-wrap;">${t.keySteps}</div>`:''}${t.notes?`<div style="font-size:11px;color:#475569;font-style:italic;">${t.notes}</div>`:''}`;
+        tc.appendChild(tb);
+      });
+      m.appendChild(tc);
+    }
+    // Sparring rounds
+    if(e.rounds&&e.rounds.some(r=>r.partner||r.submission||r.notes)){
+      const rc=d('div','margin-bottom:18px;');
+      rc.innerHTML=`<div style="font-size:10px;color:#a78bfa;letter-spacing:.2em;font-weight:700;margin-bottom:10px;">SPARRING ROUNDS</div>`;
+      const summary=d('div','display:flex;gap:10px;margin-bottom:10px;');
+      const wins=e.rounds.filter(r=>r.result==='Win').length;
+      const losses=e.rounds.filter(r=>r.result==='Loss').length;
+      const tech=e.rounds.filter(r=>r.result==='Technique').length;
+      summary.innerHTML=`<span style="font-size:13px;color:#22c55e;font-weight:700;">${wins}W</span><span style="font-size:13px;color:#ef4444;font-weight:700;">${losses}L</span>${tech?`<span style="font-size:13px;color:#94a3b8;font-weight:700;">${tech} Tech</span>`:''}`;
+      rc.appendChild(summary);
+      e.rounds.forEach((r,i)=>{
+        const rCol=r.result==='Win'?'#22c55e':r.result==='Loss'?'#ef4444':'#94a3b8';
+        const rb=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-bottom:6px;');
+        rb.innerHTML=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:${r.submission||r.notes?'5px':'0'};"><span style="font-size:11px;color:#475569;">Round ${i+1}</span>${r.partner?`<span style="font-size:11px;color:#94a3b8;">vs ${r.partner}</span>`:''}${r.duration?`<span style="font-size:10px;color:#374151;">${r.duration}</span>`:''}<span style="font-size:11px;font-weight:700;color:${rCol};">${r.result}</span>${r.submission?`<span style="font-size:10px;color:#f59e0b;background:#f59e0b18;padding:1px 7px;border-radius:4px;">${r.submission}</span>`:''}</div>${r.notes?`<div style="font-size:11px;color:#475569;font-style:italic;">${r.notes}</div>`:''}`;
+        rc.appendChild(rb);
+      });
+      m.appendChild(rc);
+    }
+    // Drill next
+    if(e.drillNext){
+      const dn=d('div','background:#090e1a;border:1px solid #a78bfa40;border-radius:10px;padding:12px;margin-bottom:14px;');
+      dn.innerHTML=`<div style="font-size:9px;color:#a78bfa;letter-spacing:.2em;font-weight:700;margin-bottom:5px;">DRILL NEXT SESSION</div><div style="font-size:13px;color:#e2e8f0;">${e.drillNext}</div>`;
+      m.appendChild(dn);
+    }
+  } else {
+    // Surf details
+    const conds=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;');
+    [{l:'Location',v:e.location},{l:'Swell',v:`${e.swellSize||'?'} ${e.swellDir||''}`.trim()},{l:'Wind',v:e.wind},{l:'Tide',v:e.tide},{l:'Board',v:e.board},{l:'Rating',v:e.rating?`${e.rating}/10`:''}].filter(x=>x.v).forEach(x=>{
+      const c=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px;');
+      c.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.1em;margin-bottom:3px;">${x.l.toUpperCase()}</div><div style="font-size:14px;font-weight:700;color:#f1f5f9;">${x.v}</div>`;
+      conds.appendChild(c);
+    });
+    m.appendChild(conds);
+    if(e.sessionFocus){
+      const sf=d('div','background:#090e1a;border-left:3px solid #0ea5e9;border-radius:0 10px 10px 0;padding:12px;margin-bottom:10px;');
+      sf.innerHTML=`<div style="font-size:9px;color:#0ea5e9;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">SESSION FOCUS</div><div style="font-size:13px;color:#e2e8f0;">${e.sessionFocus}</div>`;
+      m.appendChild(sf);
+    }
+    if(e.wentWell){
+      const gd=d('div','background:#052e16;border:1px solid #14532d;border-radius:10px;padding:12px;margin-bottom:8px;');
+      gd.innerHTML=`<div style="font-size:9px;color:#22c55e;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">✓ WHAT WENT WELL</div><div style="font-size:13px;color:#e2e8f0;line-height:1.6;">${e.wentWell}</div>`;
+      m.appendChild(gd);
+    }
+    if(e.workOn){
+      const wo=d('div','background:#1a0a0a;border:1px solid #7f1d1d;border-radius:10px;padding:12px;margin-bottom:8px;');
+      wo.innerHTML=`<div style="font-size:9px;color:#f59e0b;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">→ WORK ON</div><div style="font-size:13px;color:#e2e8f0;line-height:1.6;">${e.workOn}</div>`;
+      m.appendChild(wo);
+    }
+  }
+
+  // Session notes
+  if(e.sessionNotes){
+    const sn=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:10px;padding:12px;margin-bottom:14px;');
+    sn.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">SESSION NOTES</div><div style="font-size:12px;color:#94a3b8;line-height:1.6;white-space:pre-wrap;">${e.sessionNotes}</div>`;
+    m.appendChild(sn);
+  }
+
+  // Edit button
+  const eb=d('button','width:100%;background:transparent;border:1px solid #1f2937;border-radius:10px;padding:12px;color:#94a3b8;font-size:13px;font-weight:700;');
+  eb.textContent='Edit Entry';
+  eb.onclick=()=>{S.jForm=JSON.parse(JSON.stringify(e));S.journalViewEntry=null;S.showJournalModal=true;render();};
+  m.appendChild(eb);
+  bg.appendChild(m); return bg;
+}
+
+// ── JOURNAL ADD/EDIT MODAL ────────────────────────────────────────────────────
+function mkJournalModal(){
+  const f=S.jForm;
+  const isBJJ=f.type==='bjj';
+  const ac=isBJJ?'#ef4444':'#0ea5e9';
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=ev=>{if(ev.target===bg){S.showJournalModal=false;render();}};
+  const m=d('div',''); m.className='modal';
+
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;');
+  mh.innerHTML=`<h3 style="font-size:16px;font-weight:700;color:${ac};">${isBJJ?'🥋 BJJ Journal':'🌊 Surf Journal'}</h3>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showJournalModal=false;render();}; mh.appendChild(cl); m.appendChild(mh);
+
+  // Date
+  m.appendChild(secLbl('DATE'));
+  const di=document.createElement('input'); di.type='date'; di.value=f.date;
+  di.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;margin-bottom:14px;';
+  di.addEventListener('change',ev=>{f.date=ev.target.value;}); m.appendChild(di);
+
+  // Location
+  m.appendChild(secLbl(isBJJ?'ACADEMY / LOCATION':'BREAK / LOCATION'));
+  const li2=document.createElement('input'); li2.type='text';
+  li2.placeholder=isBJJ?'e.g. Gold Coast BJJ, Open mat...':'e.g. Snapper Rocks, Greenmount...';
+  li2.value=f.location||'';
+  li2.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;';
+  li2.addEventListener('input',ev=>{f.location=ev.target.value;}); m.appendChild(li2);
+
+  if(isBJJ){
+    // Techniques section
+    m.appendChild(secLbl('TECHNIQUES DRILLED'));
+    const techWrap=d('div','margin-bottom:6px;'); m.appendChild(techWrap);
+    function renderTechniques(){
+      techWrap.innerHTML='';
+      (f.techniques||[]).forEach((t,i)=>{
+        const tb=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:10px;padding:12px;margin-bottom:8px;');
+        const tRow=d('div','display:flex;gap:8px;margin-bottom:8px;align-items:center;');
+        const tn=document.createElement('input'); tn.type='text'; tn.placeholder='Technique name...'; tn.value=t.name||'';
+        tn.style.cssText='flex:1;background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;font-weight:700;';
+        tn.addEventListener('input',ev=>{t.name=ev.target.value;});
+        const delT=d('button','background:transparent;border:none;color:#374151;font-size:16px;padding:2px 6px;');
+        delT.textContent='✕'; delT.onclick=()=>{f.techniques.splice(i,1);renderTechniques();};
+        tRow.appendChild(tn); tRow.appendChild(delT); tb.appendChild(tRow);
+        // Position select
+        const ps=d('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;');
+        BJJ_POSITIONS.forEach(pos=>{
+          const a=t.position===pos;
+          const b=d('button',`background:${a?ac+'22':'#0a0f1a'};border:1px solid ${a?ac:'#1f2937'};color:${a?ac:'#475569'};padding:4px 10px;border-radius:14px;font-size:10px;font-weight:${a?700:400};`);
+          b.textContent=pos; b.onclick=()=>{t.position=pos;renderTechniques();}; ps.appendChild(b);
+        });
+        tb.appendChild(ps);
+        // Key steps
+        const ks=document.createElement('textarea'); ks.className='sn-ta'; ks.style.minHeight='72px'; ks.style.fontSize='12px';
+        ks.placeholder='Key steps / details to remember...\n1. ...\n2. ...\n3. ...';
+        ks.value=t.keySteps||''; ks.addEventListener('input',ev=>{t.keySteps=ev.target.value;});
+        tb.appendChild(ks);
+        // Notes
+        const nt=document.createElement('input'); nt.type='text'; nt.placeholder='Setup, common mistake, tips...';
+        nt.value=t.notes||''; nt.style.cssText='width:100%;background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:11px;margin-top:6px;';
+        nt.addEventListener('input',ev=>{t.notes=ev.target.value;}); tb.appendChild(nt);
+        techWrap.appendChild(tb);
+      });
+      const addT=d('button','width:100%;background:#090e1a;border:1px dashed #1f2937;border-radius:8px;padding:10px;color:#475569;font-size:12px;margin-bottom:14px;');
+      addT.textContent='+ Add Technique';
+      addT.onclick=()=>{f.techniques.push({name:'',position:'Guard',keySteps:'',notes:''});renderTechniques();};
+      techWrap.appendChild(addT);
+    }
+    renderTechniques();
+
+    // Sparring rounds
+    m.appendChild(secLbl('SPARRING ROUNDS'));
+    const roundWrap=d('div','margin-bottom:6px;'); m.appendChild(roundWrap);
+    function renderRounds(){
+      roundWrap.innerHTML='';
+      (f.rounds||[]).forEach((r,i)=>{
+        const rb=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:10px;padding:12px;margin-bottom:8px;');
+        rb.innerHTML=`<div style="font-size:10px;color:#a78bfa;letter-spacing:.1em;font-weight:700;margin-bottom:8px;">ROUND ${i+1}</div>`;
+        // Partner + Duration row
+        const pRow=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;');
+        const pi=document.createElement('input'); pi.type='text'; pi.placeholder='Partner (optional)'; pi.value=r.partner||'';
+        pi.style.cssText='background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:12px;';
+        pi.addEventListener('input',ev=>{r.partner=ev.target.value;});
+        const dur=document.createElement('input'); dur.type='text'; dur.placeholder='Duration e.g. 5min'; dur.value=r.duration||'';
+        dur.style.cssText='background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:12px;';
+        dur.addEventListener('input',ev=>{r.duration=ev.target.value;});
+        pRow.appendChild(pi); pRow.appendChild(dur); rb.appendChild(pRow);
+        // Result
+        const resRow=d('div','display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;');
+        ['Win','Loss','Draw','Technique'].forEach(res=>{
+          const a=r.result===res;
+          const col=res==='Win'?'#22c55e':res==='Loss'?'#ef4444':res==='Draw'?'#f59e0b':'#94a3b8';
+          const b=d('button',`background:${a?col+'22':'#0a0f1a'};border:1px solid ${a?col:'#1f2937'};color:${a?col:'#475569'};padding:5px 12px;border-radius:14px;font-size:11px;font-weight:${a?700:400};`);
+          b.textContent=res; b.onclick=()=>{r.result=res;renderRounds();}; resRow.appendChild(b);
+        });
+        rb.appendChild(resRow);
+        // Submission
+        const si2=document.createElement('input'); si2.type='text'; si2.placeholder='Submission used or caught (if any)'; si2.value=r.submission||'';
+        si2.style.cssText='width:100%;background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:12px;margin-bottom:6px;';
+        si2.addEventListener('input',ev=>{r.submission=ev.target.value;}); rb.appendChild(si2);
+        // Round notes
+        const rn=document.createElement('input'); rn.type='text'; rn.placeholder='Notes — what worked, what got you, key moments...'; rn.value=r.notes||'';
+        rn.style.cssText='width:100%;background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:11px;';
+        rn.addEventListener('input',ev=>{r.notes=ev.target.value;});
+        rb.appendChild(rn);
+        // Delete round
+        const delR=d('button','width:100%;background:transparent;border:none;color:#374151;font-size:11px;padding:6px;margin-top:6px;');
+        delR.textContent='Remove round'; delR.onclick=()=>{f.rounds.splice(i,1);renderRounds();};
+        rb.appendChild(delR); roundWrap.appendChild(rb);
+      });
+      const addR=d('button','width:100%;background:#090e1a;border:1px dashed #1f2937;border-radius:8px;padding:10px;color:#475569;font-size:12px;margin-bottom:14px;');
+      addR.textContent='+ Add Round';
+      addR.onclick=()=>{f.rounds.push({partner:'',duration:'',result:'Win',submission:'',notes:''});renderRounds();};
+      roundWrap.appendChild(addR);
+    }
+    renderRounds();
+
+    // Drill next
+    m.appendChild(secLbl('DRILL NEXT SESSION'));
+    const dn2=document.createElement('input'); dn2.type='text';
+    dn2.placeholder='What to focus on or drill next time...'; dn2.value=f.drillNext||'';
+    dn2.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;';
+    dn2.addEventListener('input',ev=>{f.drillNext=ev.target.value;}); m.appendChild(dn2);
+
+  } else {
+    // SURF FIELDS
+    // Conditions grid
+    m.appendChild(secLbl('CONDITIONS'));
+    const cGrid=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;');
+    [{key:'swellSize',lbl:'Swell Size',placeholder:'e.g. 3-4ft'},{key:'swellDir',lbl:'Swell Direction',placeholder:'e.g. SSE 12sec'}].forEach(({key,lbl,placeholder})=>{
+      const c=d('div','');
+      const l=d('div','font-size:9px;color:#475569;margin-bottom:4px;letter-spacing:.1em;'); l.textContent=lbl;
+      const i=document.createElement('input'); i.type='text'; i.placeholder=placeholder; i.value=f[key]||'';
+      i.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:12px;';
+      i.addEventListener('input',ev=>{f[key]=ev.target.value;});
+      c.appendChild(l); c.appendChild(i); cGrid.appendChild(c);
+    });
+    m.appendChild(cGrid);
+    // Wind & Tide
+    m.appendChild(secLbl('WIND'));
+    const wRow=d('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;');
+    SURF_CONDITIONS_WIND.forEach(w2=>{
+      const a=f.wind===w2;
+      const b=d('button',`background:${a?ac+'22':'#090e1a'};border:1px solid ${a?ac:'#1f2937'};color:${a?ac:'#4b5563'};padding:6px 12px;border-radius:14px;font-size:11px;font-weight:${a?700:400};`);
+      b.textContent=w2; b.onclick=()=>{f.wind=w2;render();}; wRow.appendChild(b);
+    });
+    m.appendChild(wRow);
+    m.appendChild(secLbl('TIDE'));
+    const tRow=d('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;');
+    SURF_CONDITIONS_TIDE.forEach(t2=>{
+      const a=f.tide===t2;
+      const b=d('button',`background:${a?ac+'22':'#090e1a'};border:1px solid ${a?ac:'#1f2937'};color:${a?ac:'#4b5563'};padding:6px 12px;border-radius:14px;font-size:11px;font-weight:${a?700:400};`);
+      b.textContent=t2; b.onclick=()=>{f.tide=t2;render();}; tRow.appendChild(b);
+    });
+    m.appendChild(tRow);
+    // Board
+    m.appendChild(secLbl('BOARD'));
+    const bdi=document.createElement('input'); bdi.type='text'; bdi.placeholder='e.g. 6\'2" shortboard, 9\'0" mal...'; bdi.value=f.board||'';
+    bdi.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;';
+    bdi.addEventListener('input',ev=>{f.board=ev.target.value;}); m.appendChild(bdi);
+    // Session focus
+    m.appendChild(secLbl('SESSION FOCUS / AIM'));
+    const sfi=document.createElement('input'); sfi.type='text'; sfi.placeholder='e.g. Back-foot pressure on cutbacks, paddling power...'; sfi.value=f.sessionFocus||'';
+    sfi.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;';
+    sfi.addEventListener('input',ev=>{f.sessionFocus=ev.target.value;}); m.appendChild(sfi);
+    // What went well
+    m.appendChild(secLbl('WHAT WENT WELL'));
+    const gwta=document.createElement('textarea'); gwta.className='sn-ta'; gwta.style.minHeight='64px';
+    gwta.placeholder='Manoeuvres that clicked, waves caught, paddle timing...'; gwta.value=f.wentWell||'';
+    gwta.addEventListener('input',ev=>{f.wentWell=ev.target.value;}); m.appendChild(gwta);
+    m.appendChild(d('div','margin-bottom:12px;'));
+    // Work on
+    m.appendChild(secLbl('WORK ON NEXT SESSION'));
+    const wota=document.createElement('textarea'); wota.className='sn-ta'; wota.style.minHeight='64px';
+    wota.placeholder='What felt off, what to improve, things to drill on land...'; wota.value=f.workOn||'';
+    wota.addEventListener('input',ev=>{f.workOn=ev.target.value;}); m.appendChild(wota);
+    m.appendChild(d('div','margin-bottom:12px;'));
+    // Rating
+    m.appendChild(secLbl('SESSION RATING'));
+    const ratingRow=d('div','display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-bottom:14px;');
+    for(let v=1;v<=10;v++){
+      const col=v<=4?'#ef4444':v<=7?'#f59e0b':'#22c55e',a=(f.rating||7)===v;
+      const b=d('button',`background:${a?col:'#090e1a'};border:1px solid ${a?col:'#1f2937'};border-radius:6px;padding:9px 0;color:${a?'#fff':'#374151'};font-size:12px;font-weight:700;`);
+      b.textContent=String(v); b.onclick=()=>{f.rating=v;render();}; ratingRow.appendChild(b);
+    }
+    m.appendChild(ratingRow);
+  }
+
+  // Session notes (both types)
+  m.appendChild(secLbl('SESSION NOTES'));
+  const snta=document.createElement('textarea'); snta.className='sn-ta'; snta.style.minHeight='80px';
+  snta.placeholder=isBJJ?'General session notes, injuries, energy level, observations...':"General notes, how the water felt, any standout moments, fitness observations...";
+  snta.value=f.sessionNotes||''; snta.addEventListener('input',ev=>{f.sessionNotes=ev.target.value;}); m.appendChild(snta);
+  m.appendChild(d('div','margin-bottom:20px;'));
+
+  // Save
+  const sv=d('button',`width:100%;background:linear-gradient(135deg,${isBJJ?'#7f1d1d,#ef4444':'#0c4a6e,#0ea5e9'});border:none;border-radius:12px;padding:15px;color:#fff;font-size:14px;font-weight:700;`);
+  sv.textContent='Save Journal Entry';
+  sv.onclick=()=>{
+    const entry=JSON.parse(JSON.stringify(f));
+    // Remove duplicate if editing (same date+type+location combo)
+    S.journal=S.journal.filter(e=>!(e.date===entry.date&&e.type===entry.type&&e.location===entry.location));
+    S.journal.push(entry); saveJournal();
+    S.showJournalModal=false; S.screen='journal'; render();
+  };
+  m.appendChild(sv); bg.appendChild(m); return bg;
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function genPlan(){
+  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.sessionDone=false; S.postSessionNote='';
+  render();
+  const sd=sleepDec(S.sleepH,S.sleepM),ss=sleepStr(S.sleepH,S.sleepM),gb=garminBand(S.sleepScore),shift=SHIFTS.find(x=>x.label===S.shift);
+  const msg=`Today's check-in:
+- Sleep: ${ss} (${sd.toFixed(2)}h) | Garmin score: ${S.sleepScore}/100 — ${gb.label}
+- RHR: ${S.rhr}bpm | HRV: ${S.hrv}ms | Body Battery: ${S.bodyBattery||'not recorded'} | Stress: ${S.stress||'not recorded'} | Resp rate: ${S.respRate||'not recorded'}
+- Energy: ${S.energy}/10 | Shift: ${S.shift} (${shift?.times||''}) | Gym: ${S.gym}
+- Fasted weight: ${S.weight?S.weight+'kg':'not recorded'}
+- Surf today: ${S.surf?'Yes':'No'} | BJJ today: ${S.bjj?'Yes':'No'}
+${S.notes?`- Morning notes: ${S.notes}`:''}
+Generate today's optimal training plan.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1800,system:sysPrompt(),messages:[{role:'user',content:msg}]})});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+    const text=(data.content||[]).map(b=>b.text||'').join('');
+    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+    S.plan=parsed;
+    S.log=[...S.log.filter(e=>e.date!==todayKey()),{date:todayKey(),sleepH:S.sleepH,sleepM:S.sleepM,sleepDec:sd,sleepStr:ss,sleepScore:S.sleepScore,rhr:S.rhr,hrv:S.hrv,energy:S.energy,bodyBattery:S.bodyBattery,stress:S.stress,respRate:S.respRate,weight:S.weight,shift:S.shift,gym:S.gym,surf:S.surf,bjj:S.bjj,readiness:parsed.readiness,readiness_score:parsed.readiness_score,session_title:parsed.session_title,completed:null,notes:S.notes}];
+    saveLog();
+    // Auto-generate rolling summary if sessions have grown beyond 30
+    if(S.log.length>30) maybeGenerateSummary();
+    S.screen='plan';
+  }catch(err){ S.error=err.message||String(err); }
+  S.loading=false; render();
+}
+
+function markDone(){
+  S.sessionDone=true; S.feedback=null;
+  S.log=S.log.map(e=>e.date===todayKey()?{
+    ...e,
+    completed:S.plan?.session_title||'Done',
+    blockNotes:{...(e.blockNotes||{}), ...S.blockNotes},
+    postSessionNote:S.postSessionNote||e.postSessionNote||'',
+  }:e);
+  saveLog(); render();
+}
+
+// ── SESSION FEEDBACK & NEXT SESSION ──────────────────────────────────────────
+async function genFeedback(){
+  S.feedbackLoading=true; render();
+  const p=S.plan;
+  const todayEntry=S.log.find(e=>e.date===todayKey());
+  // Find last session of same type for comparison
+  const sameType=S.log.filter(e=>e.date!==todayKey()&&e.session_type===p?.session_type).slice(-3);
+  const recentAll=S.log.slice(-7);
+
+  const sys=`You are an elite S&C coach reviewing a completed training session for a surf/BJJ athlete.
+Surgery: RIGHT SHOULDER April 24 2026. LEFT ELBOW lateral epicondylalgia recovering.
+HRV baseline 34-47ms. Current phase: Accumulate (wks 3-4), target 70-80% 1RM.
+Strength baselines: Back squat 70kg×6, DB bench 20kg×10, Bulgarian split squat 10kg×8, Glute bridge 50kg×10, Pull-ups 5-6 reps, Chest-supported row 12.5kg, Landmine press 10kg, Echo bike Z2 146w.
+Respond with valid JSON only, no markdown.`;
+
+  const msg=`Session just completed:
+Title: ${p?.session_title||'Training session'}
+Type: ${p?.session_type||''}
+Today's metrics: Sleep ${todayEntry?.sleepStr||'?'} (score ${todayEntry?.sleepScore||'?'}), RHR ${todayEntry?.rhr||'?'}, HRV ${todayEntry?.hrv||'?'}ms, Energy ${todayEntry?.energy||'?'}/10, BB ${todayEntry?.bodyBattery||'?'}
+Post-session notes: ${S.postSessionNote||'none provided'}
+Block notes: ${Object.entries(S.blockNotes).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join(' | ')||'none'}
+Prescribed session: ${JSON.stringify(p?.blocks?.map(b=>({title:b.title,exercises:b.exercises?.map(e=>({name:e.name,sets:e.sets,load:e.load}))})))}
+
+Previous ${p?.session_type||''} sessions for comparison:
+${sameType.map(e=>`${e.date}: ${e.session_title} | Post: ${e.postSessionNote?.slice(0,200)||'none'}`).join('\n')||'No previous sessions of this type'}
+
+Recent training context (last 7 days):
+${recentAll.map(e=>`${e.date}: ${e.session_title||'?'} | E:${e.energy}/10 | HRV:${e.hrv}ms`).join('\n')}
+
+Provide feedback on this session and a specific next session preview for this session type.
+
+{
+  "headline": "one punchy sentence summarising the session quality",
+  "session_rating": 1-10,
+  "feedback": {
+    "performance": "2-3 sentences on how loads/performance compared to baseline and recent trend",
+    "elbow": "specific observation on elbow based on notes",
+    "fatigue_signal": "what the post-session notes suggest about recovery needs",
+    "highlight": "the best thing about today's session",
+    "watch": "one thing to monitor or address"
+  },
+  "additional_work": {
+    "recommended": true or false,
+    "reason": "why additional work is or isn't recommended today",
+    "items": [
+      {
+        "title": "e.g. Lower back release / Second elbow session / Hip mobility",
+        "type": "stretch|rehab|mobility|conditioning",
+        "exercises": [
+          {"name": "exercise name", "sets": "sets/duration", "notes": "specific instruction"}
+        ]
+      }
+    ]
+  },
+  "next_session": {
+    "title": "Next [session type] session title",
+    "timing": "recommended days until next session of this type",
+    "key_targets": [
+      {"exercise": "name", "target": "specific load/reps target with progression logic", "note": "why this target"}
+    ],
+    "focus": "overall focus or theme for the next session",
+    "elbow_guidance": "specific elbow rehab progression note for next time",
+    "readiness_note": "what readiness metrics to look for before hitting these targets"
+  }
+}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:sys,messages:[{role:'user',content:msg}]})});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const text=(data.content||[]).map(b=>b.text||'').join('');
+    S.feedback=JSON.parse(text.replace(/```json|```/g,'').trim());
+    S.showFeedbackModal=true;
+  }catch(err){ console.error(err); }
+  S.feedbackLoading=false; render();
+}
+
+function mkFeedbackModal(){
+  const fb=S.feedback;
+  if(!fb) return d('div','');
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=e=>{if(e.target===bg){S.showFeedbackModal=false;render();}};
+  const m=d('div',''); m.className='modal';
+
+  // Header
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;');
+  const ratingCol=fb.session_rating>=8?'#22c55e':fb.session_rating>=6?'#f59e0b':'#ef4444';
+  mh.innerHTML=`<div><div style="font-size:16px;font-weight:700;">Session Feedback</div><div style="font-size:11px;color:#374151;margin-top:2px;">${S.plan?.session_title||''}</div></div>`;
+  const scoreBox=d('div',`display:flex;align-items:center;gap:8px;`);
+  scoreBox.innerHTML=`<div style="width:44px;height:44px;border-radius:50%;background:${ratingCol}20;border:2px solid ${ratingCol};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:${ratingCol};">${fb.session_rating}</div>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;margin-left:8px;');
+  cl.textContent='×'; cl.onclick=()=>{S.showFeedbackModal=false;render();};
+  scoreBox.appendChild(cl); mh.appendChild(scoreBox); m.appendChild(mh);
+
+  // Headline
+  const hl=d('div','background:#0d1117;border-left:3px solid #a78bfa;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px;');
+  hl.innerHTML=`<p style="font-size:13px;color:#e2e8f0;line-height:1.6;margin:0;font-style:italic;">"${fb.headline}"</p>`;
+  m.appendChild(hl);
+
+  // Feedback sections
+  const fbSecs=[
+    {key:'performance', label:'PERFORMANCE', color:'#22d3ee', icon:'💪'},
+    {key:'elbow',       label:'LEFT ELBOW',  color:'#4ade80', icon:'🩹'},
+    {key:'fatigue_signal', label:'FATIGUE SIGNAL', color:'#f59e0b', icon:'⚡'},
+    {key:'highlight',   label:'SESSION HIGHLIGHT', color:'#22c55e', icon:'✓'},
+    {key:'watch',       label:'WATCH THIS',  color:'#ef4444', icon:'⚠'},
+  ];
+  const fbGrid=d('div','display:grid;gap:8px;margin-bottom:20px;');
+  fbSecs.forEach(s=>{
+    if(!fb.feedback?.[s.key]) return;
+    const row=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:10px;padding:12px;');
+    row.innerHTML=`<div style="font-size:9px;color:${s.color};letter-spacing:.15em;font-weight:700;margin-bottom:5px;">${s.icon} ${s.label}</div><div style="font-size:12px;color:#94a3b8;line-height:1.6;">${fb.feedback[s.key]}</div>`;
+    fbGrid.appendChild(row);
+  });
+  m.appendChild(fbGrid);
+
+  // Next session preview
+  if(fb.next_session){
+    const ns=fb.next_session;
+    const nsCard=d('div','background:#0b1120;border:1px solid #22d3ee40;border-radius:12px;overflow:hidden;margin-bottom:16px;');
+    nsCard.innerHTML=`<div style="background:#22d3ee12;padding:12px 16px;border-bottom:1px solid #22d3ee20;"><div style="font-size:9px;color:#22d3ee;letter-spacing:.2em;font-weight:700;margin-bottom:3px;">NEXT SESSION PREVIEW</div><div style="font-size:15px;font-weight:700;color:#f1f5f9;">${ns.title||''}</div><div style="font-size:11px;color:#475569;margin-top:2px;">⏱ ${ns.timing||''}</div></div>`;
+
+    // Focus
+    if(ns.focus){
+      const fc=d('div','padding:12px 16px;border-bottom:1px solid #0d1117;');
+      fc.innerHTML=`<div style="font-size:9px;color:#f59e0b;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">SESSION FOCUS</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${ns.focus}</div>`;
+      nsCard.appendChild(fc);
+    }
+
+    // Key targets
+    if(ns.key_targets?.length){
+      const kt=d('div','padding:12px 16px;border-bottom:1px solid #0d1117;');
+      kt.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.15em;font-weight:700;margin-bottom:10px;">TARGET LOADS</div>`;
+      ns.key_targets.forEach(t=>{
+        const tr=d('div','padding:8px 0;border-bottom:1px solid #0a0f1a;');
+        tr.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:3px;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${t.exercise}</span><span style="font-size:11px;color:#22d3ee;font-weight:700;background:#22d3ee14;padding:2px 8px;border-radius:4px;white-space:nowrap;">${t.target}</span></div>${t.note?`<div style="font-size:11px;color:#475569;line-height:1.4;">${t.note}</div>`:''}`;
+        kt.appendChild(tr);
+      });
+      nsCard.appendChild(kt);
+    }
+
+    // Elbow guidance
+    if(ns.elbow_guidance){
+      const eg=d('div','padding:12px 16px;border-bottom:1px solid #0d1117;background:#060f06;');
+      eg.innerHTML=`<div style="font-size:9px;color:#4ade80;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">🩹 ELBOW NEXT SESSION</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${ns.elbow_guidance}</div>`;
+      nsCard.appendChild(eg);
+    }
+
+    // Readiness note
+    if(ns.readiness_note){
+      const rn=d('div','padding:12px 16px;');
+      rn.innerHTML=`<div style="font-size:9px;color:#a78bfa;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">READINESS TO HIT THESE TARGETS</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${ns.readiness_note}</div>`;
+      nsCard.appendChild(rn);
+    }
+
+    m.appendChild(nsCard);
+  }
+
+  // Additional work today
+  if(fb.additional_work){
+    const aw=fb.additional_work;
+    const awCard=d('div',`background:${aw.recommended?'#0a0f1a':'#0b1120'};border:1px solid ${aw.recommended?'#f59e0b40':'#1f2937'};border-radius:12px;overflow:hidden;margin-bottom:16px;`);
+    const awHdr=d('div',`padding:12px 16px;border-bottom:1px solid ${aw.recommended?'#f59e0b20':'#0d1117'};background:${aw.recommended?'#f59e0b10':'transparent'};`);
+    awHdr.innerHTML=`<div style="font-size:9px;color:${aw.recommended?'#f59e0b':'#475569'};letter-spacing:.2em;font-weight:700;margin-bottom:3px;">${aw.recommended?'✦ ADDITIONAL WORK RECOMMENDED TODAY':'— NO ADDITIONAL WORK NEEDED'}</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${aw.reason||''}</div>`;
+    awCard.appendChild(awHdr);
+    if(aw.recommended&&aw.items?.length){
+      aw.items.forEach(item=>{
+        const typeCol=item.type==='rehab'?'#4ade80':item.type==='stretch'?'#22d3ee':item.type==='mobility'?'#a78bfa':'#f59e0b';
+        const itemDiv=d('div','padding:12px 16px;border-bottom:1px solid #0d1117;');
+        itemDiv.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${item.title}</span><span style="font-size:9px;color:${typeCol};background:${typeCol}18;padding:1px 7px;border-radius:4px;font-weight:700;letter-spacing:.1em;">${(item.type||'').toUpperCase()}</span></div>`;
+        (item.exercises||[]).forEach(ex=>{
+          const exRow=d('div','display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #090e1a;');
+          exRow.innerHTML=`<div style="flex:1;"><div style="display:flex;gap:8px;align-items:center;margin-bottom:2px;"><span style="font-size:12px;font-weight:700;color:#e2e8f0;">${ex.name}</span><span style="font-size:10px;color:${typeCol};background:${typeCol}14;padding:1px 6px;border-radius:4px;">${ex.sets}</span></div>${ex.notes?`<div style="font-size:11px;color:#475569;line-height:1.4;">${ex.notes}</div>`:''}</div>`;
+          itemDiv.appendChild(exRow);
+        });
+        awCard.appendChild(itemDiv);
+      });
+    }
+    m.appendChild(awCard);
+  }
+
+  const doneBtn=d('button','width:100%;background:#111827;border:1px solid #1f2937;border-radius:12px;padding:14px;color:#94a3b8;font-size:14px;font-weight:700;');
+  doneBtn.textContent='Close'; doneBtn.onclick=()=>{S.showFeedbackModal=false;render();};
+  m.appendChild(doneBtn);
+  bg.appendChild(m); return bg;
+}
+
+// ── AUTO SUMMARY ──────────────────────────────────────────────────────────────
+// Called after saveLog — if we have >30 sessions, condense the oldest into a summary
+async function maybeGenerateSummary(){
+  if(S.log.length<=30) return;
+  // Sessions that have fallen outside the 30-session window
+  const toSummarise=S.log.slice(0,-30);
+  // Check if we already have a summary covering these dates
+  const oldestInWindow=S.log.slice(-30)[0]?.date||'';
+  const alreadySummarised=S.summaries.some(s=>s.upToDate>=oldestInWindow);
+  if(alreadySummarised||toSummarise.length===0) return;
+
+  const fromDate=toSummarise[0].date;
+  const toDate=toSummarise[toSummarise.length-1].date;
+  const logText=toSummarise.map(e=>
+    `${e.date}: ${e.session_title||'?'} | HRV:${e.hrv}ms RHR:${e.rhr} Sleep:${e.sleepStr||'?'} E:${e.energy}/10 Wt:${e.weight||'?'}kg | ${e.postSessionNote?.slice(0,150)||''}`
+  ).join('\n');
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:400,
+        system:'You are an S&C coach. Summarise the following training sessions into a concise 3-5 sentence paragraph capturing: key strength progressions, injury/rehab status trends, readiness patterns, volume and load highlights, and any notable events. Be specific with numbers. Output plain text only — no markdown, no headings.',
+        messages:[{role:'user',content:`Summarise these sessions (${fromDate} to ${toDate}):\n${logText}`}]
+      })
+    });
+    const data=await res.json();
+    const text=(data.content||[]).map(b=>b.text||'').join('').trim();
+    if(text){
+      S.summaries=[...S.summaries,{dateRange:`${fromDate} to ${toDate}`,upToDate:toDate,text,generatedAt:todayKey()}];
+      saveSummaries();
+    }
+  }catch(err){ console.error('Summary generation failed:',err); }
+}
+
+// ── GOAL / PROGRAM UPDATE MODAL ───────────────────────────────────────────────
+function mkGoalModal(){
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=e=>{if(e.target===bg){S.showGoalModal=false;render();}};
+  const m=d('div',''); m.className='modal';
+
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;');
+  mh.innerHTML=`<div><div style="font-size:16px;font-weight:700;">⚡ Program Update</div><div style="font-size:11px;color:#475569;margin-top:2px;">Tell the coach what's changed</div></div>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showGoalModal=false;render();}; mh.appendChild(cl); m.appendChild(mh);
+
+  // Examples
+  const ex=d('div','background:#090e1a;border-radius:10px;padding:12px;margin-bottom:16px;');
+  ex.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.15em;font-weight:700;margin-bottom:8px;">EXAMPLES</div>
+    ${['Surgery in 1 week — switch to final taper and prehab only',
+       'Right shoulder surgery done — post-op recovery phase, right arm in sling',
+       'Lower back injury — switch focus to rehab, avoid all spinal loading',
+       'Starting a new 8-week block focused on BJJ competition prep',
+       'Back to full training — clear from surgeon, rebuild both shoulder and elbow',
+       'Surfing a comp in 3 weeks — peak surf performance focus'].map(e2=>
+      `<div style="font-size:11px;color:#4b5563;padding:4px 0;border-bottom:1px solid #0d1117;cursor:pointer;" onclick="document.getElementById('goal-input').value='${e2}';S.goalText='${e2}';">"${e2}"</div>`
+    ).join('')}`;
+  m.appendChild(ex);
+
+  m.appendChild(secLbl('DESCRIBE WHAT\'S CHANGED OR WHAT YOUR NEW GOAL IS'));
+  const ta=document.createElement('textarea');
+  ta.id='goal-input';
+  ta.placeholder='Be as specific as you like. The coach will read your full history and re-evaluate your program from scratch based on this.';
+  ta.style.cssText='width:100%;background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:12px;color:#e2e8f0;font-size:13px;resize:vertical;min-height:100px;line-height:1.5;margin-bottom:16px;';
+  ta.value=S.goalText||'';
+  ta.addEventListener('input',e=>{S.goalText=e.target.value;}); m.appendChild(ta);
+
+  if(S.goalError){
+    const eb=d('div','color:#ef4444;font-size:12px;padding:10px;background:#1a0808;border-radius:8px;margin-bottom:12px;');
+    eb.textContent=S.goalError; m.appendChild(eb);
+  }
+
+  const genBtn=d('button',`width:100%;background:${S.goalLoading?'#090e1a':'linear-gradient(135deg,#1d4ed8,#7c3aed)'};border:${S.goalLoading?'1px solid #1f2937':'none'};border-radius:12px;padding:15px;color:${S.goalLoading?'#374151':'#fff'};font-size:14px;font-weight:700;margin-bottom:14px;`);
+  genBtn.textContent=S.goalLoading?'⏳  Re-evaluating your program...':'⚡  Generate New Program Context';
+  if(!S.goalLoading) genBtn.onclick=genGoalUpdate;
+  m.appendChild(genBtn);
+
+  // Program history
+  if(S.programs.length>0){
+    const ph=d('div','');
+    ph.innerHTML=`<div style="font-size:10px;color:#475569;letter-spacing:.15em;font-weight:700;margin-bottom:10px;">PROGRAM HISTORY</div>`;
+    [...S.programs].reverse().forEach((p,i)=>{
+      const pc=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-bottom:6px;');
+      pc.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-weight:700;color:${i===0?'#22c55e':'#94a3b8'};">${i===0?'✓ ACTIVE':''} ${p.date}</span></div><div style="font-size:11px;color:#4b5563;font-style:italic;">"${p.trigger}"</div>`;
+      ph.appendChild(pc);
+    });
+    m.appendChild(ph);
+  }
+
+  bg.appendChild(m); return bg;
+}
+
+async function genGoalUpdate(){
+  if(!S.goalText?.trim()){ S.goalError='Please describe what has changed or your new goal.'; render(); return; }
+  S.goalLoading=true; S.goalError=null; render();
+
+  const recentLog=S.log.slice(-30).map(e=>
+    `${e.date}: ${e.session_title||'?'} HRV:${e.hrv}ms RHR:${e.rhr} E:${e.energy}/10 Wt:${e.weight||'?'}kg | ${e.postSessionNote?.slice(0,150)||''}`
+  ).join('\n');
+
+  const summaryText=S.summaries.map(s=>`${s.dateRange}: ${s.text}`).join('\n');
+
+  const sys=`You are an elite S&C coach. An athlete is updating their training program goal or context. Read their full history and generate a comprehensive program context block that will guide all future training prescriptions. Be specific about: new phase/focus, load adjustments, exercise modifications, injury considerations, timeline, and what to prioritise vs deprioritise. Output plain text only — concise but thorough, 8-15 sentences. No markdown.`;
+
+  const msg=`ATHLETE UPDATE: "${S.goalText}"
+
+RECENT HISTORY (last 30 sessions):
+${recentLog}
+
+${summaryText?'HISTORICAL SUMMARY:\n'+summaryText:''}
+
+Based on this update and full history, generate a new program context that will guide all future daily plans.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:sys,messages:[{role:'user',content:msg}]})
+    });
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const context=(data.content||[]).map(b=>b.text||'').join('').trim();
+    const entry={date:todayKey(),trigger:S.goalText.trim(),context};
+    S.programs=[...S.programs,entry];
+    savePrograms();
+    S.goalText=''; S.showGoalModal=false;
+  }catch(err){
+    S.goalError='Could not generate program update. Check internet connection.';
+    console.error(err);
+  }
+  S.goalLoading=false; render();
+}
+
+render();
+</script>
+</body>
+</html>
