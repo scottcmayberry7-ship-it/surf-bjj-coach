@@ -150,15 +150,75 @@ const FOODS = [
 ];
 const FOOD_CATS = ['All','Beef','Lamb','Pork','Poultry','Fish','Eggs','Dairy','Snacks','Supps'];
 
-// ── SUPPLEMENTS ───────────────────────────────────────────────────────────────
+// ── SUPPLEMENTS — complete pre-surgery stack ──────────────────────────────────
 const SUPPS = [
-  {key:'creatine',  name:'Creatine',           dose:'5g',              timing:'Any time daily',                color:'#22c55e', why:'Reduces muscle loss during post-surgery immobilisation'},
-  {key:'omega3',    name:'Omega-3',             dose:'3–4g EPA+DHA',    timing:'With largest meal',             color:'#0ea5e9', why:'Anti-inflammatory — elbow tendon & labral repair'},
-  {key:'vitD3',     name:'Vitamin D3',          dose:'4000–5000 IU',    timing:'With fat-containing meal',      color:'#f59e0b', why:'Surgical recovery, immune function, bone density'},
-  {key:'vitK2',     name:'Vitamin K2 (MK-7)',   dose:'100–200mcg',      timing:'Take with D3',                  color:'#f97316', why:'Works with D3 — directs calcium to bones not arteries'},
-  {key:'magnesium', name:'Magnesium Glycinate',  dose:'400mg',           timing:'30–60 min before bed',          color:'#a78bfa', why:'Sleep quality on rotating shifts, muscle recovery'},
-  {key:'collagen',  name:'Collagen + Vit C',    dose:'15g + 50mg Vit C','timing':'30–60 min pre-training',       color:'#22d3ee', why:'Tendon synthesis window — critical timing for elbow rehab'},
-  {key:'zinc',      name:'Zinc',                dose:'25–30mg',         timing:'With meal, away from iron',     color:'#4ade80', why:'Tissue repair, wound healing, immune function'},
+  // PRE-TRAINING WINDOW (30-60 min before)
+  {key:'collagen_mix', name:'Pre-Training Collagen Mix',
+   dose:'15g HCP + 10g Gelatin + 200mg Vit C + 1 tsp BotB',
+   timing:'30–60 min BEFORE training — non-negotiable timing',
+   color:'#22d3ee', group:'pre-training',
+   why:'Mix in warm bone broth: 15g Bulk Nutrients HCP collagen peptides + 10g CollagenX gelatin + 200mg Bulk Nutrients Vitamin C powder + 1 tsp Best of the Bone broth. Total ~28g collagen protein hitting the joint synthesis window. The HCP is fast-absorbing, the gelatin is slower release — together they sustain the window longer than either alone. Critical for left elbow tendon repair and pre-surgical tissue quality. Add 3g glycine to this mix for enhanced collagen synthesis signal.'},
+  {key:'glycine_pre',  name:'Glycine (pre-training dose)',
+   dose:'3g',
+   timing:'Add to collagen mix 30–60 min before training',
+   color:'#22d3ee', group:'pre-training',
+   why:'Glycine is one-third of all amino acids in collagen. Adding 3g free glycine to your collagen mix boosts the synthesis signal beyond what the collagen protein alone provides. Bulk Nutrients sell glycine powder — slightly sweet taste, dissolves easily in the broth mix.'},
+  // WITH LARGEST MEAL
+  {key:'omega3',       name:'NOW Foods Ultra Omega-3',
+   dose:'2 softgels (1000mg EPA / 500mg DHA)',
+   timing:'With largest meal — ⚠ reduce to 1 softgel 7 days before surgery (Apr 17)',
+   color:'#0ea5e9', group:'with-meal',
+   why:'500mg EPA / 250mg DHA per softgel. Take 2 daily = 1000mg EPA / 500mg DHA. Anti-inflammatory — directly relevant to left elbow tendon and labral repair healing. Take with food containing fat for best absorption. IMPORTANT: reduce to 1 softgel from April 17 — mild blood thinning, discuss with surgeon.'},
+  {key:'vitD3',        name:'Sports Research Vitamin D3 5000 IU',
+   dose:'1 softgel (5000 IU / 125mcg)',
+   timing:'With largest fat-containing meal daily',
+   color:'#f59e0b', group:'with-meal',
+   why:'Sports Research with coconut oil carrier — absorption built in. Pre-surgical D3 levels directly correlate with healing speed and reduced infection risk. Most Australians are deficient, especially shift workers with limited sun exposure. Take right through to day before surgery.'},
+  {key:'jointcomplex', name:'Bulk Nutrients Joint Complex',
+   dose:'As per label (typically 1-2 serves)',
+   timing:'With food',
+   color:'#f97316', group:'with-meal',
+   why:'Glucosamine, chondroitin, MSM — cartilage support directly relevant to labral repair recovery. Take consistently leading into surgery to maximise joint tissue quality. Check label for curcumin content.'},
+  {key:'livercaps',    name:'Bulk Nutrients Beef Liver Capsules',
+   dose:'4–6 capsules',
+   timing:'With food — separate from ZMA by 2+ hours (zinc/iron compete)',
+   color:'#ef4444', group:'with-meal',
+   why:'Most bioavailable source of B12, iron, vitamin A, copper, CoQ10. Supports energy production, immune function and tissue repair. Do not take at the same time as your ZMA — zinc and iron compete for absorption. Take with lunch or first meal.'},
+  {key:'curcumin',     name:'Curcumin + Piperine',
+   dose:'500–1000mg curcumin + 5mg piperine',
+   timing:'With food — ⚠ STOP 7 days before surgery (Apr 17)',
+   color:'#f59e0b', group:'with-meal',
+   why:'Strong evidence for tendon and joint inflammation reduction. Piperine (black pepper extract) is essential — increases curcumin absorption by up to 2000%. Directly relevant to elbow rehab and labral repair. Source: California Gold Nutrition on iHerb or Plant Doctor Australia. MUST STOP April 17 — mild blood thinning effect.'},
+  // ANY TIME
+  {key:'creatine',     name:'Bulk Nutrients Creatine Monohydrate',
+   dose:'5g',
+   timing:'Any time daily — mix into anything',
+   color:'#22c55e', group:'anytime',
+   why:'Most important supplement for your situation. Strong evidence for reducing muscle loss during post-surgery immobilisation. Start now, take every single day, do NOT stop through surgery. 5g daily is maintenance dose — no loading phase needed. At your body weight (~88kg) this is optimal dosing.'},
+  // BEFORE BED
+  {key:'zma',          name:'Bulk Nutrients ZMA Complex',
+   dose:'As per label',
+   timing:'30–60 min before bed — EMPTY STOMACH only',
+   color:'#a78bfa', group:'before-bed',
+   why:'Zinc, Magnesium, B6. Empty stomach is critical — food, especially calcium, blocks magnesium and zinc absorption significantly. Separate from beef liver capsules by 2+ hours. Covers both zinc and magnesium in one supplement.'},
+  {key:'magglycinate', name:'Bulk Nutrients Magnesium Glycinate',
+   dose:'1–2 capsules (~180–360mg elemental magnesium)',
+   timing:'Before bed — check ZMA magnesium content, top up to ~400mg total',
+   color:'#a78bfa', group:'before-bed',
+   why:'Glycinate is the most bioavailable and gentle magnesium form. Particularly important for shift workers — supports circadian rhythm regulation, reduces cortisol, improves sleep quality. Check how much magnesium is in your ZMA and use this to top up to ~400mg total elemental magnesium nightly.'},
+  {key:'glycine_bed',  name:'Glycine (bedtime dose)',
+   dose:'3g',
+   timing:'Before bed — dissolve in water',
+   color:'#94a3b8', group:'before-bed',
+   why:'Separate from pre-training dose. 3g before bed consistently shown to reduce time to fall asleep and increase slow-wave restorative sleep — especially valuable for rotating shift workers. Slightly sweet taste, easy to take. Bulk Nutrients glycine powder.'},
+];
+
+// Group labels for display
+const SUPP_GROUPS = [
+  {key:'pre-training', label:'PRE-TRAINING WINDOW (30–60 min before)', color:'#22d3ee'},
+  {key:'with-meal',    label:'WITH LARGEST MEAL',                       color:'#f59e0b'},
+  {key:'anytime',      label:'ANY TIME DAILY',                          color:'#22c55e'},
+  {key:'before-bed',   label:'BEFORE BED',                              color:'#a78bfa'},
 ];
 
 // ── SEED LOG ──────────────────────────────────────────────────────────────────
@@ -279,7 +339,7 @@ let S = {
   weight:'',notes:'',
   plan:null,loading:false,error:null,
   ticked:{},blockNotes:{},warmupTicked:{},sessionDone:false,postSessionNote:'',
-  sessionAvgHR:'',
+  sessionAvgHR:'', sessionAvgWatts:'', sessionPeakWatts:'',
   preWorkoutNote:'',preWorkoutResponse:'',preWorkoutLoading:false,
   log:[],
   showAddModal:false,
@@ -308,6 +368,8 @@ let S = {
   showProgramHistory:false,
   // api key
   apiKey:'', showSettings:false,
+  // nutrition feedback
+  nutFeedback:null, nutFeedbackLoading:false,
 };
 S.log       = loadLog();
 S.nut       = loadNut(todayKey());
@@ -680,16 +742,20 @@ function mkPlan(){
       </div>
       ${cond.notes?`<div style="font-size:11px;color:#475569;line-height:1.5;">${cond.notes}</div>`:''}`;
     condCard.appendChild(condBody);
-    // Ave HR input for conditioning
-    const hrRow=d('div','padding:10px 16px;border-top:1px solid #0d1117;display:flex;align-items:center;gap:12px;background:#090e1a;');
-    hrRow.innerHTML=`<span style="font-size:11px;color:#475569;flex-shrink:0;">Session avg HR:</span>`;
-    const hrInp=document.createElement('input'); hrInp.type='number'; hrInp.min=60; hrInp.max=220;
-    hrInp.placeholder='e.g. 125'; hrInp.value=S.sessionAvgHR||''; hrInp.className='num-inp';
-    hrInp.style.cssText='color:#ef4444;border-color:#ef444440;width:80px;font-size:16px;';
-    hrInp.addEventListener('click',e2=>e2.stopPropagation());
-    hrInp.addEventListener('input',e2=>{e2.stopPropagation();S.sessionAvgHR=e2.target.value;S.log=S.log.map(l=>l.date===todayKey()?{...l,sessionAvgHR:e2.target.value}:l);saveLog();});
-    const hrUnit=d('span','font-size:13px;color:#475569;'); hrUnit.textContent='bpm';
-    hrRow.appendChild(hrInp); hrRow.appendChild(hrUnit);
+    // Metrics input row for conditioning
+    const hrRow=d('div','padding:10px 16px;border-top:1px solid #0d1117;background:#090e1a;display:flex;flex-wrap:wrap;gap:12px;align-items:center;');
+    hrRow.innerHTML=`<span style="font-size:10px;color:#475569;letter-spacing:.1em;font-weight:700;width:100%;margin-bottom:4px;">COMPLETED METRICS</span>`;
+    [{label:'Avg HR',key:'sessionAvgHR',unit:'bpm',color:'#ef4444'},{label:'Avg Watts',key:'sessionAvgWatts',unit:'w',color:'#f59e0b'},{label:'Peak Watts',key:'sessionPeakWatts',unit:'w',color:'#f97316'}].forEach(f=>{
+      const col=d('div','display:flex;flex-direction:column;align-items:center;gap:3px;');
+      const lbl=d('div','font-size:9px;color:#475569;'); lbl.textContent=f.label;
+      const inp=document.createElement('input'); inp.type='number'; inp.placeholder='—'; inp.value=S[f.key]||''; inp.className='num-inp';
+      inp.style.cssText=`color:${f.color};border-color:${f.color}40;width:72px;font-size:15px;`;
+      inp.addEventListener('click',e2=>e2.stopPropagation());
+      inp.addEventListener('input',e2=>{e2.stopPropagation();S[f.key]=e2.target.value;S.log=S.log.map(l=>l.date===todayKey()?{...l,[f.key]:e2.target.value}:l);saveLog();});
+      const unit=d('div','font-size:9px;color:#374151;'); unit.textContent=f.unit;
+      col.appendChild(lbl); col.appendChild(inp); col.appendChild(unit);
+      hrRow.appendChild(col);
+    });
     condCard.appendChild(hrRow);
     w.appendChild(condCard);
   }
@@ -857,26 +923,60 @@ function mkNutrition(){
   }
   w.appendChild(flc);
 
-  // SUPPLEMENTS
+  // SUPPLEMENTS — grouped by timing
   const sc2=mkCard('#a78bfa','DAILY SUPPLEMENTS');
-  const suppNote=d('div','font-size:11px;color:#475569;margin-bottom:14px;line-height:1.5;'); suppNote.textContent='Tap any supplement for dosing rationale. Tick when taken.'; sc2.appendChild(suppNote);
-  SUPPS.forEach(s=>{
-    const checked=!!(nut.supps&&nut.supps[s.key]);
-    const row=d('div','display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #0d1117;cursor:pointer;');
-    const chk=d('div',`width:22px;height:22px;border-radius:5px;flex-shrink:0;border:1.5px solid ${checked?s.color:'#1f2937'};background:${checked?s.color:'transparent'};display:flex;align-items:center;justify-content:center;font-size:13px;color:#000;`);
-    chk.textContent=checked?'✓':'';
-    const info=d('div','flex:1;');
-    info.innerHTML=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${s.name}</span><span style="font-size:10px;color:${s.color};background:${s.color}18;padding:1px 7px;border-radius:4px;">${s.dose}</span></div><div style="font-size:10px;color:#475569;margin-top:2px;">${s.timing}</div>`;
-    const inf=d('button','background:transparent;border:none;color:#334155;font-size:16px;padding:2px 6px;'); inf.textContent='ℹ';
-    inf.onclick=e=>{ e.stopPropagation(); S.suppDetail=s; render(); };
-    row.appendChild(chk); row.appendChild(info); row.appendChild(inf);
-    row.onclick=()=>{
-      const supps={...(nut.supps||{}),[s.key]:!checked};
-      S.nut={...nut,supps}; saveNut(todayKey(),S.nut); render();
-    };
-    sc2.appendChild(row);
+  const suppNote=d('div','font-size:11px;color:#475569;margin-bottom:14px;line-height:1.5;');
+  suppNote.innerHTML='Tap any supplement for full protocol detail. Tick when taken. <span style="color:#ef4444;font-weight:700;">⚠ Curcumin + Omega-3: stop April 17 (7 days before surgery)</span>';
+  sc2.appendChild(suppNote);
+  SUPP_GROUPS.forEach(grp=>{
+    const grpSupps=SUPPS.filter(s=>s.group===grp.key);
+    if(!grpSupps.length) return;
+    const grpHdr=d('div',`font-size:9px;color:${grp.color};letter-spacing:.2em;font-weight:700;padding:8px 0 6px;border-bottom:1px solid #0d1117;margin-bottom:6px;`);
+    grpHdr.textContent=grp.label; sc2.appendChild(grpHdr);
+    grpSupps.forEach(s=>{
+      const checked=!!(nut.supps&&nut.supps[s.key]);
+      const isStopDate=s.key==='curcumin'||s.key==='omega3';
+      const row=d('div','display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #0a0f1a;cursor:pointer;');
+      const chk=d('div',`width:22px;height:22px;border-radius:5px;flex-shrink:0;border:1.5px solid ${checked?s.color:'#1f2937'};background:${checked?s.color:'transparent'};display:flex;align-items:center;justify-content:center;font-size:13px;color:#000;`);
+      chk.textContent=checked?'✓':'';
+      const info=d('div','flex:1;');
+      info.innerHTML=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;font-weight:700;color:#f1f5f9;">${s.name}</span>${isStopDate?'<span style="font-size:9px;color:#ef4444;background:#ef444418;padding:1px 6px;border-radius:3px;">STOP APR 17</span>':''}</div><div style="font-size:10px;color:${s.color};margin-top:1px;">${s.dose}</div>`;
+      const inf=d('button','background:transparent;border:none;color:#334155;font-size:16px;padding:2px 6px;'); inf.textContent='ℹ';
+      inf.onclick=e=>{ e.stopPropagation(); S.suppDetail=s; render(); };
+      row.appendChild(chk); row.appendChild(info); row.appendChild(inf);
+      row.onclick=()=>{ const supps={...(nut.supps||{}),[s.key]:!checked}; S.nut={...nut,supps}; saveNut(todayKey(),S.nut); render(); };
+      sc2.appendChild(row);
+    });
   });
+
+  // Supplement completion count
+  const suppDone=SUPPS.filter(s=>!!(nut.supps&&nut.supps[s.key])).length;
+  const suppBar=d('div','padding:10px 0;');
+  suppBar.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:10px;color:#4b5563;">SUPPLEMENTS TODAY</span><span style="font-size:11px;font-weight:700;color:${suppDone===SUPPS.length?'#22c55e':'#94a3b8'};">${suppDone}/${SUPPS.length}</span></div><div style="height:3px;background:#1f2937;border-radius:2px;"><div style="height:100%;width:${Math.round(suppDone/SUPPS.length*100)}%;background:#a78bfa;border-radius:2px;transition:width .3s;"></div></div>`;
+  sc2.appendChild(suppBar);
   w.appendChild(sc2);
+
+  // DAILY NUTRITION COMMENT
+  const ncCard=mkCard('#475569','DAY NOTES');
+  ncCard.querySelector('div').style.marginBottom='10px';
+  const ncTa=document.createElement('textarea'); ncTa.className='sn-ta';
+  ncTa.placeholder='e.g. Birthday blowout — off plan today / Intentional refeed / Extended fast 20hrs / Strict carnivore / Rehydration day...';
+  ncTa.style.minHeight='56px';
+  ncTa.value=nut.dayNote||'';
+  ncTa.addEventListener('input',e=>{ S.nut={...nut,dayNote:e.target.value}; saveNut(todayKey(),S.nut); });
+  ncCard.appendChild(ncTa);
+  w.appendChild(ncCard);
+
+  // NUTRITION FEEDBACK BUTTON
+  const nfBtn=d('button',`width:100%;background:${S.nutFeedbackLoading?'#090e1a':'#0b1120'};border:1px solid #22d3ee40;border-radius:12px;padding:14px;color:${S.nutFeedbackLoading?'#374151':'#22d3ee'};font-size:13px;font-weight:700;margin-bottom:${S.nutFeedback?'8px':'0'};`);
+  nfBtn.textContent=S.nutFeedbackLoading?'⏳  Checking nutrition...':'🥩  Get Nutrition Feedback';
+  if(!S.nutFeedbackLoading) nfBtn.onclick=genNutFeedback;
+  w.appendChild(nfBtn);
+  if(S.nutFeedback){
+    const nfCard=d('div','background:#0b1120;border:1px solid #22d3ee30;border-radius:12px;padding:14px;');
+    nfCard.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.2em;font-weight:700;margin-bottom:10px;">NUTRITION FEEDBACK</div>${S.nutFeedback}`;
+    w.appendChild(nfCard);
+  }
   return w;
 }
 
@@ -1044,19 +1144,27 @@ function mkSuppDetail(){
     </div>`;
   // Pre-surgery specific note
   const notes={
-    creatine:'Start loading NOW before April 24. Research shows creatine supplementation before surgery significantly reduces muscle loss during the immobilisation period post-op. 5g daily is a maintenance dose — no loading phase needed.',
-    omega3:'3-4g EPA+DHA daily. Reduce to 1g in the week before surgery (minor blood thinning consideration — check with surgeon). Resume at full dose immediately post-op.',
-    vitD3:'Most Australians, especially shift workers with limited sun exposure, are deficient. Get levels tested if you can. Pre-surgical D3 levels directly correlate with healing speed.',
-    vitK2:'Essential companion to D3. Without K2, supplemental calcium from D3 can deposit in arteries instead of bones. MK-7 form has the longest half-life — once daily is sufficient.',
-    magnesium:'Glycinate form is best tolerated and most bioavailable. Particularly important for shift workers — supports circadian rhythm regulation and reduces cortisol. Take with the last meal of your eating window.',
-    collagen:'The timing is critical. Vitamin C is needed for collagen synthesis. Take 30-60 min before training to flood the joint with amino acids during the loading window. Particularly beneficial for the elbow tendon.',
-    zinc:'Important: zinc competes with iron for absorption. Take with a meal but not your highest-iron meal (usually a red meat meal). Zinc is depleted quickly during tissue repair post-surgery — priority supplement.',
+    collagen_mix:'Your pre-training collagen mix is well-designed. Mix in warm bone broth 30-60 min before training: 15g Bulk Nutrients HCP + 10g CollagenX gelatin + 200mg Vit C + 1 tsp Best of the Bone + 3g glycine. The HCP is fast-absorbing, the gelatin slower release — together they sustain the synthesis window. This is your most important timing-sensitive supplement for the elbow tendon.',
+    glycine_pre:'Add 3g to your pre-training collagen mix. Glycine makes up one-third of all collagen amino acids. Adding free glycine to your collagen drink significantly boosts the synthesis signal. Bulk Nutrients glycine powder is slightly sweet — dissolves easily in the broth mix.',
+    omega3:'2 softgels daily = 1000mg EPA / 500mg DHA. Take with your largest meal. IMPORTANT: reduce to 1 softgel from April 17 (7 days before surgery) — omega-3 has mild blood thinning properties. Resume full dose immediately post-op.',
+    vitD3:'Sports Research with coconut oil — absorption is built in. 1 softgel daily with your largest meal. Pre-surgical D3 levels directly correlate with healing speed and infection resistance. Take right through to the day before surgery.',
+    jointcomplex:'Take with food as per label. Glucosamine, chondroitin and MSM support cartilage directly relevant to your labral repair. Take consistently to build up in the system before surgery.',
+    livercaps:'4-6 capsules with food. Most bioavailable B12, iron, Vitamin A, copper and CoQ10 available. Do NOT take at the same time as ZMA — iron and zinc compete for absorption. Separate by at least 2 hours.',
+    curcumin:'Take with food for best absorption. Piperine is essential — increases curcumin absorption dramatically. Strong evidence for joint and tendon inflammation reduction. MUST STOP April 17 — 7 days before surgery due to mild blood thinning. Source: California Gold Nutrition on iHerb or Plant Doctor Australia.',
+    creatine:'5g any time daily. Most important supplement for your surgery situation — reduces muscle loss during immobilisation post-op. Mix into coffee, water, food — anything. Do NOT stop through surgery. Start now if you haven\'t already.',
+    zma:'Take on a completely empty stomach or with only a small snack 30-60 min before bed. Food — especially calcium or dairy — significantly reduces zinc and magnesium absorption. Separate from beef liver capsules by 2+ hours. Covers both zinc and magnesium in one supplement.',
+    magglycinate:'Check your ZMA label for magnesium content. Use this to top up to ~400mg total elemental magnesium nightly. Glycinate is the most bioavailable and sleep-supportive form. Shift workers particularly benefit — supports circadian rhythm and cortisol regulation.',
+    glycine_bed:'3g in water before bed — separate from your pre-training dose. Research shows 3g before bed reduces time to fall asleep and increases slow-wave restorative sleep. Particularly valuable given your shift work and sleep scores of 72-81.',
   };
   if(notes[s.key]){
-    const pn=d('div','background:#0a0f1a;border:1px solid #1f2937;border-radius:10px;padding:14px;border-left:3px solid '+s.color+';');
-    pn.innerHTML=`<div style="font-size:9px;color:${s.color};letter-spacing:.15em;font-weight:700;margin-bottom:6px;">PRE-SURGERY PROTOCOL NOTE</div><div style="font-size:12px;color:#9ca3af;line-height:1.6;">${notes[s.key]}</div>`;
+    const pn=d('div','background:#0a0f1a;border:1px solid #1f2937;border-radius:10px;padding:14px;border-left:3px solid '+s.color+';margin-bottom:10px;');
+    pn.innerHTML=`<div style="font-size:9px;color:${s.color};letter-spacing:.15em;font-weight:700;margin-bottom:6px;">PRE-SURGERY PROTOCOL</div><div style="font-size:12px;color:#9ca3af;line-height:1.6;">${notes[s.key]}</div>`;
     m.appendChild(pn);
   }
+  // Show timing block
+  const timingBox=d('div','background:#090e1a;border-radius:10px;padding:12px 14px;');
+  timingBox.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.1em;margin-bottom:4px;">TIMING</div><div style="font-size:13px;color:#e2e8f0;line-height:1.5;">${s.timing}</div>`;
+  m.appendChild(timingBox);
   bg.appendChild(m); return bg;
 }
 
@@ -1568,7 +1676,7 @@ function mkJournalModal(){
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function genPlan(){
-  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.warmupTicked={}; S.sessionDone=false; S.postSessionNote=''; S.sessionAvgHR=''; S.preWorkoutNote=''; S.preWorkoutResponse=''; S.feedback=null;
+  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.warmupTicked={}; S.sessionDone=false; S.postSessionNote=''; S.sessionAvgHR=''; S.sessionAvgWatts=''; S.sessionPeakWatts=''; S.preWorkoutNote=''; S.preWorkoutResponse=''; S.feedback=null; S.nutFeedback=null;
   render();
   const sd=sleepDec(S.sleepH,S.sleepM),ss=sleepStr(S.sleepH,S.sleepM),gb=garminBand(S.sleepScore),shift=SHIFTS.find(x=>x.label===S.shift);
   const msg=`Today's check-in:
@@ -1603,6 +1711,8 @@ function markDone(){
     blockNotes:{...(e.blockNotes||{}),...S.blockNotes},
     postSessionNote:S.postSessionNote||e.postSessionNote||'',
     sessionAvgHR:S.sessionAvgHR||e.sessionAvgHR||'',
+    sessionAvgWatts:S.sessionAvgWatts||e.sessionAvgWatts||'',
+    sessionPeakWatts:S.sessionPeakWatts||e.sessionPeakWatts||'',
   }:e);
   saveLog(); render();
 }
@@ -1687,6 +1797,12 @@ Provide feedback on this session and a specific next session preview for this se
     "focus": "overall focus or theme for the next session",
     "elbow_guidance": "specific elbow rehab progression note for next time",
     "readiness_note": "what readiness metrics to look for before hitting these targets"
+  },
+  "next_day_preview": {
+    "session_type": "e.g. Mobility + Conditioning / Lower Body Strength / Rest",
+    "rationale": "1 sentence why this is the right session tomorrow given today",
+    "key_focus": "the one thing to prioritise tomorrow",
+    "elbow_note": "elbow rehab note for tomorrow"
   }
 }`;
 
@@ -1701,7 +1817,39 @@ Provide feedback on this session and a specific next session preview for this se
   S.feedbackLoading=false; render();
 }
 
-function mkFeedbackModal(){
+// ── NUTRITION FEEDBACK ────────────────────────────────────────────────────────
+async function genNutFeedback(){
+  S.nutFeedbackLoading=true; S.nutFeedback=null; render();
+  const nut=S.nut;
+  const ptarget=proteinTarget();
+  const totalP=Math.round(nut.foods.reduce((s,f)=>s+f.protein,0));
+  const totalK=Math.round(nut.foods.reduce((s,f)=>s+f.calories,0));
+  const suppsDone=SUPPS.filter(s=>!!(nut.supps&&nut.supps[s.key])).map(s=>s.name);
+  const suppsMissed=SUPPS.filter(s=>!(nut.supps&&nut.supps[s.key])).map(s=>s.name);
+  const fastingHrs=nut.eatStart&&nut.eatEnd?((new Date(nut.eatEnd)-new Date(nut.eatStart))/3600000).toFixed(1):'unknown';
+  const todayLog=S.log.find(e=>e.date===todayKey());
+  const sys=`You are a sports nutritionist coaching a carnivore/intermittent fasting athlete pre-surgery. Give concise, practical nutrition feedback in 4-6 short HTML lines using spans for colour — no markdown. Use <div style="margin-bottom:6px;"> for each point. Colours: green=#22c55e, amber=#f59e0b, red=#ef4444, cyan=#22d3ee, muted=#94a3b8.`;
+  const msg=`Today's nutrition:
+- Protein: ${totalP}g of ${ptarget}g target (${Math.round(totalP/ptarget*100)}%)
+- Calories: ${totalK} kcal
+- Eating window: ${fastingHrs} hours
+- Foods logged: ${nut.foods.map(f=>f.foodName).join(', ')||'none'}
+- Supplements taken: ${suppsDone.join(', ')||'none'}
+- Supplements missed: ${suppsMissed.join(', ')||'none'}
+- Day note: ${nut.dayNote||'none'}
+- Training today: ${todayLog?.session_title||'not logged'}
+Give feedback on protein target, supplement compliance (especially pre-training collagen timing and creatine), fasting window, and one actionable suggestion.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:sys,messages:[{role:'user',content:msg}]})
+    });
+    const data=await res.json();
+    S.nutFeedback=(data.content||[]).map(b=>b.text||'').join('').trim();
+  }catch(err){ S.nutFeedback='<div style="color:#ef4444;">Could not get feedback — check connection.</div>'; }
+  S.nutFeedbackLoading=false; render();
+}
   const fb=S.feedback;
   if(!fb) return d('div','');
   const bg=d('div',''); bg.className='modal-bg';
@@ -1803,6 +1951,22 @@ function mkFeedbackModal(){
       });
     }
     m.appendChild(awCard);
+  }
+
+  // ── TOMORROW'S SUGGESTED SESSION ──
+  if(fb.next_day_preview){
+    const nd=fb.next_day_preview;
+    const ndCard=d('div','background:#0b1120;border:1px solid #22c55e30;border-radius:12px;overflow:hidden;margin-bottom:16px;');
+    const ndHdr=d('div','padding:11px 16px;background:#22c55e08;border-bottom:1px solid #22c55e20;display:flex;justify-content:space-between;align-items:center;');
+    ndHdr.innerHTML=`<span style="font-size:9px;color:#22c55e;letter-spacing:.2em;font-weight:700;">📅 TOMORROW'S SUGGESTED SESSION</span>`;
+    ndCard.appendChild(ndHdr);
+    const ndBody=d('div','padding:14px 16px;');
+    ndBody.innerHTML=`<div style="font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">${nd.session_type||''}</div>
+      ${nd.rationale?`<div style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:8px;">${nd.rationale}</div>`:''}
+      ${nd.key_focus?`<div style="background:#22c55e12;border-left:3px solid #22c55e;padding:8px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:9px;color:#22c55e;letter-spacing:.15em;font-weight:700;margin-bottom:3px;">KEY FOCUS</div><div style="font-size:12px;color:#e2e8f0;">${nd.key_focus}</div></div>`:''}
+      ${nd.elbow_note?`<div style="background:#060f06;border:1px solid #14532d;border-radius:6px;padding:8px 10px;"><div style="font-size:9px;color:#4ade80;letter-spacing:.15em;font-weight:700;margin-bottom:2px;">🩹 ELBOW TOMORROW</div><div style="font-size:11px;color:#4ade8080;">${nd.elbow_note}</div></div>`:''}`;
+    ndCard.appendChild(ndBody);
+    m.appendChild(ndCard);
   }
 
   const doneBtn=d('button','width:100%;background:#111827;border:1px solid #1f2937;border-radius:12px;padding:14px;color:#94a3b8;font-size:14px;font-weight:700;');
