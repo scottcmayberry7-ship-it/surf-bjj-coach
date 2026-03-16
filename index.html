@@ -248,7 +248,10 @@ const SEED_LOG = [
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function daysLeft()   { return Math.max(0,Math.ceil((SURGERY_DATE-new Date())/86400000)); }
 function weeksLeft()  { return Math.ceil(daysLeft()/7); }
-function todayKey()   { return new Date().toISOString().slice(0,10); }
+function todayKey(){
+  const n=new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
 function todayLabel() { return new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'}).toUpperCase(); }
 function sleepDec(h,m){ return +(h+m/60).toFixed(2); }
 function sleepStr(h,m){ return m>0?`${h}h ${m}m`:`${h}h`; }
@@ -377,6 +380,8 @@ let S = {
   nutFeedback:null, nutFeedbackLoading:false,
   // food photo analysis
   showPhotoAnalysis:false, photoAnalysisLoading:false, photoAnalysisResult:null, photoDesc:'',
+  // food history
+  showFoodHistory:false, foodHistoryDate:null,
 };
 S.log       = loadLog();
 S.nut       = loadNut(todayKey());
@@ -468,6 +473,7 @@ function render(){
   if(S.showGoalModal)     app.appendChild(mkGoalModal());
   if(S.showSettings)      app.appendChild(mkSettings());
   if(S.showPhotoAnalysis) app.appendChild(mkPhotoAnalysis());
+  if(S.showFoodHistory)   app.appendChild(mkFoodHistory());
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
@@ -838,6 +844,16 @@ function mkBlock(blk,prefix,accent,hdr,bg,border,isElbow,blockKey){
 // ── NUTRITION ─────────────────────────────────────────────────────────────────
 function mkNutrition(){
   const w=d('div','');
+
+  // ── AUTO-REFRESH TO TODAY ──
+  // If the date has changed since S.nut was loaded, reload from storage for today
+  const today=todayKey();
+  if(S.nutDate!==today){
+    S.nutDate=today;
+    S.nut=loadNut(today);
+    S.nutFeedback=null;
+  }
+
   const nut=S.nut;
   const ptarget=proteinTarget();
   const totalP=Math.round(nut.foods.reduce((s,f)=>s+f.protein,0));
@@ -847,8 +863,14 @@ function mkNutrition(){
 
   // Header
   const hdr=d('div','margin-bottom:20px;');
-  hdr.innerHTML=`<p style="font-size:10px;letter-spacing:.25em;color:#374151;margin-bottom:6px;font-family:monospace;">${todayLabel()}</p><h2 style="font-size:24px;font-weight:700;">Nutrition</h2><p style="font-size:11px;color:#4b5563;margin-top:4px;">Carnivore · Intermittent Fasting · ${ptarget}g protein target (2g/kg)</p>`;
-  w.appendChild(hdr);
+  const hdrRow=d('div','display:flex;justify-content:space-between;align-items:flex-start;');
+  const hdrTxt=d('div','flex:1;');
+  hdrTxt.innerHTML=`<p style="font-size:10px;letter-spacing:.25em;color:#374151;margin-bottom:6px;font-family:monospace;">${todayLabel()}</p><h2 style="font-size:24px;font-weight:700;">Nutrition</h2><p style="font-size:11px;color:#4b5563;margin-top:4px;">Carnivore · Intermittent Fasting · ${ptarget}g protein target (2g/kg)</p>`;
+  const histBtn=d('button','background:#0b1120;border:1px solid #1f2937;border-radius:10px;padding:8px 12px;color:#94a3b8;font-size:11px;font-weight:700;white-space:nowrap;margin-top:6px;flex-shrink:0;');
+  histBtn.textContent='📅 History';
+  histBtn.onclick=()=>{S.showFoodHistory=true;S.foodHistoryDate=null;render();};
+  hdrRow.appendChild(hdrTxt); hdrRow.appendChild(histBtn);
+  hdr.appendChild(hdrRow); w.appendChild(hdr);
 
   // FASTING WINDOW
   const fc=mkCard('#f59e0b','FASTING WINDOW');
@@ -2180,6 +2202,124 @@ function mkSettings(){
   bg.appendChild(m); return bg;
 }
 
+// ── FOOD HISTORY MODAL ───────────────────────────────────────────────────────
+function mkFoodHistory(){
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=e=>{if(e.target===bg){S.showFoodHistory=false;render();}};
+  const m=d('div',''); m.className='modal';
+
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;');
+  mh.innerHTML=`<div><div style="font-size:16px;font-weight:700;">📅 Food History</div><div style="font-size:11px;color:#475569;margin-top:2px;">Past nutrition logs</div></div>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showFoodHistory=false;S.foodHistoryDate=null;render();}; mh.appendChild(cl); m.appendChild(mh);
+
+  // Load all saved nutrition dates from storage
+  let allNut={};
+  try{ allNut=JSON.parse(localStorage.getItem(NUT_KEY)||'{}'); }catch{}
+  const dates=Object.keys(allNut).filter(k=>k!==todayKey()).sort((a,b)=>b.localeCompare(a));
+
+  if(dates.length===0){
+    const empty=d('div','text-align:center;padding:30px;font-size:13px;color:#374151;');
+    empty.textContent='No past food logs yet — check back after logging a full day.';
+    m.appendChild(empty); bg.appendChild(m); return bg;
+  }
+
+  // If a specific date is selected — show detail view
+  if(S.foodHistoryDate&&allNut[S.foodHistoryDate]){
+    const entry=allNut[S.foodHistoryDate];
+    const totalP=Math.round((entry.foods||[]).reduce((s,f)=>s+f.protein,0));
+    const totalK=Math.round((entry.foods||[]).reduce((s,f)=>s+f.calories,0));
+    const ptarget=proteinTarget();
+    const pPct=Math.min(100,Math.round(totalP/ptarget*100));
+    const suppsDone=SUPPS.filter(s=>!!(entry.supps&&entry.supps[s.key])).length;
+
+    // Back button
+    const back=d('button','background:#0b1120;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;color:#94a3b8;font-size:12px;margin-bottom:16px;');
+    back.textContent='← Back to history'; back.onclick=()=>{S.foodHistoryDate=null;render();};
+    m.appendChild(back);
+
+    // Date header
+    const dh=d('div','margin-bottom:14px;');
+    const dateObj=new Date(S.foodHistoryDate+'T12:00:00');
+    dh.innerHTML=`<div style="font-size:14px;font-weight:700;color:#f1f5f9;">${dateObj.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'})}</div>`;
+    m.appendChild(dh);
+
+    // Summary bar
+    const sb=d('div','display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;');
+    const pCol=pPct>=100?'#22c55e':pPct>=75?'#f59e0b':'#ef4444';
+    [{l:'Protein',v:`${totalP}g`,sub:`of ${ptarget}g`,c:pCol},{l:'Calories',v:totalK,sub:'kcal',c:'#f59e0b'},{l:'Supps',v:`${suppsDone}/${SUPPS.length}`,sub:'taken',c:'#a78bfa'}].forEach(x=>{
+      const sc=d('div','background:#090e1a;border-radius:10px;padding:10px;text-align:center;');
+      sc.innerHTML=`<div style="font-size:18px;font-weight:700;color:${x.c};">${x.v}</div><div style="font-size:9px;color:#374151;margin-top:2px;">${x.l.toUpperCase()}</div><div style="font-size:9px;color:#475569;">${x.sub}</div>`;
+      sb.appendChild(sc);
+    });
+    m.appendChild(sb);
+
+    // Protein bar
+    const pb=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:12px 14px;margin-bottom:14px;');
+    pb.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:11px;color:#94a3b8;">Protein progress</span><span style="font-size:11px;font-weight:700;color:${pCol};">${pPct}%</span></div><div style="height:6px;background:#1f2937;border-radius:3px;"><div style="height:100%;width:${pPct}%;background:${pCol};border-radius:3px;"></div></div>`;
+    m.appendChild(pb);
+
+    // Food entries
+    if(entry.foods&&entry.foods.length>0){
+      const flbl=d('div','font-size:10px;color:#475569;letter-spacing:.15em;font-weight:700;margin-bottom:8px;'); flbl.textContent='FOOD LOG'; m.appendChild(flbl);
+      entry.foods.forEach(f=>{
+        const fr=d('div','display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #0a0f1a;');
+        fr.innerHTML=`<div style="font-size:10px;color:#374151;font-family:monospace;min-width:34px;padding-top:2px;">${f.time||''}</div><div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px;">${f.foodName}</div><div style="display:flex;gap:8px;font-size:11px;"><span style="color:#22c55e;font-weight:700;">+${Math.round(f.protein)}g protein</span><span style="color:#475569;">${Math.round(f.calories)} kcal</span></div></div>`;
+        m.appendChild(fr);
+      });
+    } else {
+      const nf=d('div','font-size:12px;color:#374151;padding:8px 0;'); nf.textContent='No food entries logged.'; m.appendChild(nf);
+    }
+
+    // Fasting window
+    if(entry.eatStart||entry.eatEnd){
+      m.appendChild(d('div','margin-top:12px;'));
+      const fw=d('div','background:#090e1a;border-radius:8px;padding:10px 12px;margin-bottom:10px;');
+      const eatDur=entry.eatStart&&entry.eatEnd?durStr(new Date(entry.eatEnd)-new Date(entry.eatStart)):'—';
+      fw.innerHTML=`<div style="font-size:9px;color:#f59e0b;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">EATING WINDOW</div><div style="font-size:13px;color:#f1f5f9;">${eatDur}${entry.eatStart?' · '+new Date(entry.eatStart).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+' → '+(entry.eatEnd?new Date(entry.eatEnd).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}):'open'):''}</div>`;
+      m.appendChild(fw);
+    }
+
+    // Day note
+    if(entry.dayNote){
+      const dn=d('div','background:#090e1a;border-radius:8px;padding:10px 12px;margin-top:8px;');
+      dn.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">DAY NOTE</div><div style="font-size:12px;color:#94a3b8;font-style:italic;">"${entry.dayNote}"</div>`;
+      m.appendChild(dn);
+    }
+
+    bg.appendChild(m); return bg;
+  }
+
+  // ── LIST VIEW — all past dates ──
+  dates.slice(0,30).forEach(date=>{
+    const entry=allNut[date];
+    const totalP=Math.round((entry.foods||[]).reduce((s,f)=>s+f.protein,0));
+    const totalK=Math.round((entry.foods||[]).reduce((s,f)=>s+f.calories,0));
+    const ptarget=proteinTarget();
+    const pPct=Math.min(100,Math.round(totalP/ptarget*100));
+    const suppsDone=SUPPS.filter(s=>!!(entry.supps&&entry.supps[s.key])).length;
+    const pCol=pPct>=100?'#22c55e':pPct>=75?'#f59e0b':'#ef4444';
+    const dateObj=new Date(date+'T12:00:00');
+
+    const card=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;');
+    card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">${dateObj.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})}</div>
+        <div style="font-size:10px;color:#374151;">${(entry.foods||[]).length} foods logged</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:28px;height:4px;background:#1f2937;border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pPct}%;background:${pCol};border-radius:2px;"></div></div><span style="font-size:11px;color:${pCol};font-weight:700;">${totalP}g P</span></div>
+        <span style="font-size:11px;color:#475569;">${totalK} kcal</span>
+        <span style="font-size:11px;color:#a78bfa;">${suppsDone}/${SUPPS.length} supps</span>
+        ${entry.dayNote?`<span style="font-size:10px;color:#374151;font-style:italic;">"${entry.dayNote.slice(0,30)}${entry.dayNote.length>30?'...':''}"</span>`:''}
+      </div>`;
+    card.onclick=()=>{S.foodHistoryDate=date;render();};
+    m.appendChild(card);
+  });
+
+  bg.appendChild(m); return bg;
+}
+
 // ── FOOD PHOTO ANALYSIS ───────────────────────────────────────────────────────
 function mkPhotoAnalysis(){
   const bg=d('div',''); bg.className='modal-bg';
@@ -2250,6 +2390,124 @@ async function analysePhoto(){
     S.photoAnalysisResult=JSON.parse(text.replace(/```json|```/g,'').trim());
   }catch(err){S.photoAnalysisResult={description:'Analysis failed',protein:'?',calories:'?',fat:'?',carbs:'?',notes:'Error: '+err.message,confidence:'low'};}
   S.photoAnalysisLoading=false;render();
+}
+
+// ── FOOD HISTORY ──────────────────────────────────────────────────────────────
+function mkFoodHistory(){
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=e=>{if(e.target===bg){S.showFoodHistory=false;render();}};
+  const m=d('div',''); m.className='modal';
+
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;');
+  mh.innerHTML=`<div><div style="font-size:16px;font-weight:700;">📅 Food History</div><div style="font-size:11px;color:#475569;margin-top:2px;">Tap any day to view</div></div>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showFoodHistory=false;render();}; mh.appendChild(cl); m.appendChild(mh);
+
+  // Get all stored nutrition dates
+  let allNut={};
+  try{ allNut=JSON.parse(localStorage.getItem(NUT_KEY)||'{}'); }catch{}
+  const dates=Object.keys(allNut).sort((a,b)=>b.localeCompare(a));
+
+  if(dates.length===0){
+    const empty=d('div','text-align:center;padding:30px;font-size:13px;color:#374151;');
+    empty.textContent='No food history yet — start logging today.';
+    m.appendChild(empty); bg.appendChild(m); return bg;
+  }
+
+  // If a date is selected, show that day's detail
+  if(S.foodHistoryDate&&allNut[S.foodHistoryDate]){
+    const dayNut=allNut[S.foodHistoryDate];
+    const dayP=Math.round((dayNut.foods||[]).reduce((s,f)=>s+f.protein,0));
+    const dayK=Math.round((dayNut.foods||[]).reduce((s,f)=>s+f.calories,0));
+    const ptarget=proteinTarget();
+
+    const backBtn=d('button','background:transparent;border:none;color:#94a3b8;font-size:13px;padding:0;margin-bottom:14px;cursor:pointer;display:flex;align-items:center;gap:6px;');
+    backBtn.innerHTML='← Back to all days'; backBtn.onclick=()=>{S.foodHistoryDate=null;render();};
+    m.appendChild(backBtn);
+
+    // Day summary
+    const daySumm=d('div','background:#090e1a;border-radius:10px;padding:14px;margin-bottom:14px;');
+    const pPct=Math.min(100,Math.round(dayP/ptarget*100));
+    const pCol=pPct>=90?'#22c55e':pPct>=60?'#f59e0b':'#ef4444';
+    daySumm.innerHTML=`<div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">${S.foodHistoryDate}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;background:#0a0f1a;border-radius:8px;padding:10px;"><div style="font-size:22px;font-weight:700;color:${pCol};">${dayP}g</div><div style="font-size:9px;color:#475569;">PROTEIN (target ${ptarget}g)</div></div>
+        <div style="text-align:center;background:#0a0f1a;border-radius:8px;padding:10px;"><div style="font-size:22px;font-weight:700;color:#94a3b8;">${dayK}</div><div style="font-size:9px;color:#475569;">KCAL</div></div>
+      </div>
+      <div style="height:5px;background:#1f2937;border-radius:3px;"><div style="height:100%;width:${pPct}%;background:${pCol};border-radius:3px;"></div></div>`;
+    if(dayNut.dayNote){
+      const noteDiv=d('div','background:#0a0f1a;border-left:3px solid #475569;border-radius:0 6px 6px 0;padding:8px 10px;margin-top:8px;');
+      noteDiv.innerHTML=`<div style="font-size:9px;color:#475569;letter-spacing:.1em;margin-bottom:3px;">DAY NOTE</div><div style="font-size:12px;color:#94a3b8;font-style:italic;">"${dayNut.dayNote}"</div>`;
+      daySumm.appendChild(noteDiv);
+    }
+    m.appendChild(daySumm);
+
+    // Fasting window
+    if(dayNut.eatStart||dayNut.eatEnd){
+      const fw=d('div','background:#090e1a;border-radius:8px;padding:10px 12px;margin-bottom:12px;');
+      const start=dayNut.eatStart?new Date(dayNut.eatStart).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}):'—';
+      const end=dayNut.eatEnd?new Date(dayNut.eatEnd).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}):'—';
+      const winDur=dayNut.eatStart&&dayNut.eatEnd?durStr(new Date(dayNut.eatEnd)-new Date(dayNut.eatStart)):'';
+      fw.innerHTML=`<div style="font-size:9px;color:#f59e0b;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">FASTING WINDOW</div><div style="font-size:13px;color:#e2e8f0;">${start} → ${end}${winDur?' · <span style="color:#f59e0b;">'+winDur+' eating window</span>':''}</div>`;
+      m.appendChild(fw);
+    }
+
+    // Food entries
+    if(dayNut.foods&&dayNut.foods.length>0){
+      const flbl=d('div','font-size:10px;color:#475569;letter-spacing:.1em;font-weight:700;margin-bottom:8px;'); flbl.textContent='FOOD LOG';
+      m.appendChild(flbl);
+      dayNut.foods.forEach(entry=>{
+        const row=d('div','display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #0d1117;');
+        row.innerHTML=`<div style="font-size:10px;color:#475569;font-family:monospace;min-width:36px;padding-top:2px;">${entry.time||''}</div>
+          <div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px;">${entry.foodName}</div>
+          <div style="display:flex;gap:8px;font-size:11px;"><span style="color:#22c55e;font-weight:700;">+${Math.round(entry.protein)}g protein</span><span style="color:#475569;">${Math.round(entry.calories)} kcal</span>${entry.isEstimate?'<span style="color:#f59e0b;font-size:9px;">AI estimate</span>':''}</div></div>`;
+        m.appendChild(row);
+      });
+    }
+
+    // Supplements
+    if(dayNut.supps&&Object.keys(dayNut.supps).length>0){
+      const slbl=d('div','font-size:10px;color:#475569;letter-spacing:.1em;font-weight:700;margin-top:12px;margin-bottom:8px;'); slbl.textContent='SUPPLEMENTS';
+      m.appendChild(slbl);
+      const suppRow=d('div','display:flex;flex-wrap:wrap;gap:6px;');
+      SUPPS.forEach(s=>{
+        if(dayNut.supps[s.key]){
+          const chip=d('span',`font-size:10px;color:${s.color};background:${s.color}18;padding:3px 8px;border-radius:10px;`);
+          chip.textContent='✓ '+s.name; suppRow.appendChild(chip);
+        }
+      });
+      m.appendChild(suppRow);
+    }
+
+  } else {
+    // Day list view
+    dates.forEach(date=>{
+      const dayNut=allNut[date];
+      const dayP=Math.round((dayNut.foods||[]).reduce((s,f)=>s+f.protein,0));
+      const dayK=Math.round((dayNut.foods||[]).reduce((s,f)=>s+f.calories,0));
+      const suppCount=dayNut.supps?Object.values(dayNut.supps).filter(Boolean).length:0;
+      const ptarget=proteinTarget();
+      const pPct=Math.min(100,Math.round(dayP/ptarget*100));
+      const pCol=pPct>=90?'#22c55e':pPct>=60?'#f59e0b':'#ef4444';
+      const isToday=date===todayKey();
+
+      const row=d('div',`background:#0b1120;border:1px solid ${isToday?'#22d3ee30':'#111827'};border-radius:10px;padding:12px 16px;margin-bottom:8px;cursor:pointer;`);
+      row.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:700;color:#f1f5f9;">${isToday?'Today — ':''}${date}</span>
+        <span style="font-size:11px;font-weight:700;color:${pCol};">${dayP}g protein</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:10px;color:#475569;">${dayK} kcal</span>
+        ${suppCount?`<span style="font-size:10px;color:#a78bfa;">${suppCount}/${SUPPS.length} supps</span>`:''}
+        ${dayNut.dayNote?`<span style="font-size:10px;color:#475569;font-style:italic;">"${dayNut.dayNote.slice(0,40)}${dayNut.dayNote.length>40?'...':''}"</span>`:''}
+      </div>
+      <div style="height:3px;background:#1f2937;border-radius:2px;margin-top:8px;"><div style="height:100%;width:${pPct}%;background:${pCol};border-radius:2px;"></div></div>`;
+      row.onclick=()=>{S.foodHistoryDate=date;render();};
+      m.appendChild(row);
+    });
+  }
+
+  bg.appendChild(m); return bg;
 }
 
 render();
