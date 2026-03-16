@@ -174,6 +174,11 @@ const SUPPS = [
    timing:'With largest fat-containing meal daily',
    color:'#f59e0b', group:'with-meal',
    why:'Sports Research with coconut oil carrier — absorption built in. Pre-surgical D3 levels directly correlate with healing speed and reduced infection risk. Most Australians are deficient, especially shift workers with limited sun exposure. Take right through to day before surgery.'},
+  {key:'vitK2',        name:'Vitamin K2 MK-7',
+   dose:'100–200mcg MK-7',
+   timing:'Take with D3 and fat-containing meal',
+   color:'#f97316', group:'with-meal',
+   why:'D3 increases calcium absorption — K2 directs that calcium to bones rather than arteries or soft tissue. Without K2 at 5000 IU D3, extra calcium can deposit in wrong places. MK-7 form has the longest half-life — once daily is sufficient. RECOMMENDED PRODUCT: Switch Nutrition D3+K2 (switchnutrition.com.au) — 5000 IU D3 + MK-7, TGA listed, matches your current D3 dose exactly. Can replace your Sports Research D3 with this one product covering both. Alternative: Bioglan K2+D3 from Chemist Warehouse.'},
   {key:'jointcomplex', name:'Bulk Nutrients Joint Complex',
    dose:'As per label (typically 1-2 serves)',
    timing:'With food',
@@ -370,6 +375,8 @@ let S = {
   apiKey:'', showSettings:false,
   // nutrition feedback
   nutFeedback:null, nutFeedbackLoading:false,
+  // food photo analysis
+  showPhotoAnalysis:false, photoAnalysisLoading:false, photoAnalysisResult:null, photoDesc:'',
 };
 S.log       = loadLog();
 S.nut       = loadNut(todayKey());
@@ -460,6 +467,7 @@ function render(){
   if(S.showFeedbackModal) app.appendChild(mkFeedbackModal());
   if(S.showGoalModal)     app.appendChild(mkGoalModal());
   if(S.showSettings)      app.appendChild(mkSettings());
+  if(S.showPhotoAnalysis) app.appendChild(mkPhotoAnalysis());
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
@@ -902,10 +910,15 @@ function mkNutrition(){
 
   // ADD FOOD + LOG
   const flc=mkCard('#f97316','FOOD LOG');
-  const addFoodBtn=d('button','width:100%;background:linear-gradient(135deg,#c2410c,#f97316);border:none;border-radius:10px;padding:13px;color:#fff;font-size:14px;font-weight:700;margin-bottom:14px;');
-  addFoodBtn.textContent='+ Add Food Entry';
+  const btnRow2=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;');
+  const addFoodBtn=d('button','width:100%;background:linear-gradient(135deg,#c2410c,#f97316);border:none;border-radius:10px;padding:13px;color:#fff;font-size:13px;font-weight:700;');
+  addFoodBtn.textContent='+ Add Food';
   addFoodBtn.onclick=()=>{ S.showAddFood=true; S.selFood=null; S.foodSearch=''; S.foodCat='All'; S.foodGrams=300; render(); };
-  flc.appendChild(addFoodBtn);
+  const photoBtn=d('button','width:100%;background:#0b1120;border:1px solid #f97316;border-radius:10px;padding:13px;color:#f97316;font-size:13px;font-weight:700;');
+  photoBtn.textContent='📷 Analyse Photo';
+  photoBtn.onclick=()=>{ S.showPhotoAnalysis=true; S.photoAnalysisResult=null; S.photoDesc=''; render(); };
+  btnRow2.appendChild(addFoodBtn); btnRow2.appendChild(photoBtn);
+  flc.appendChild(btnRow2);
   if(nut.foods.length===0){
     const empty=d('div','text-align:center;padding:16px;font-size:12px;color:#374151;'); empty.textContent='No food logged yet today.'; flc.appendChild(empty);
   } else {
@@ -1148,6 +1161,7 @@ function mkSuppDetail(){
     glycine_pre:'Add 3g to your pre-training collagen mix. Glycine makes up one-third of all collagen amino acids. Adding free glycine to your collagen drink significantly boosts the synthesis signal. Bulk Nutrients glycine powder is slightly sweet — dissolves easily in the broth mix.',
     omega3:'2 softgels daily = 1000mg EPA / 500mg DHA. Take with your largest meal. IMPORTANT: reduce to 1 softgel from April 17 (7 days before surgery) — omega-3 has mild blood thinning properties. Resume full dose immediately post-op.',
     vitD3:'Sports Research with coconut oil — absorption is built in. 1 softgel daily with your largest meal. Pre-surgical D3 levels directly correlate with healing speed and infection resistance. Take right through to the day before surgery.',
+    vitK2:'D3 increases calcium absorption significantly. K2 MK-7 activates osteocalcin and matrix GLA protein — these direct calcium into bones and keep it out of arteries and soft tissue. At 5000 IU D3 daily, K2 is important best practice. RECOMMENDED: Switch Nutrition D3+K2 at switchnutrition.com.au — 5000 IU D3 + MK-7 in one capsule, TGA listed, replaces your current Sports Research D3. Alternative: Bioglan K2+D3 from Chemist Warehouse. Dose: 100-200mcg MK-7 daily.',
     jointcomplex:'Take with food as per label. Glucosamine, chondroitin and MSM support cartilage directly relevant to your labral repair. Take consistently to build up in the system before surgery.',
     livercaps:'4-6 capsules with food. Most bioavailable B12, iron, Vitamin A, copper and CoQ10 available. Do NOT take at the same time as ZMA — iron and zinc compete for absorption. Separate by at least 2 hours.',
     curcumin:'Take with food for best absorption. Piperine is essential — increases curcumin absorption dramatically. Strong evidence for joint and tendon inflammation reduction. MUST STOP April 17 — 7 days before surgery due to mild blood thinning. Source: California Gold Nutrition on iHerb or Plant Doctor Australia.',
@@ -1850,6 +1864,8 @@ Give feedback on protein target, supplement compliance (especially pre-training 
   }catch(err){ S.nutFeedback='<div style="color:#ef4444;">Could not get feedback — check connection.</div>'; }
   S.nutFeedbackLoading=false; render();
 }
+
+function mkFeedbackModal(){
   const fb=S.feedback;
   if(!fb) return d('div','');
   const bg=d('div',''); bg.className='modal-bg';
@@ -2162,6 +2178,78 @@ function mkSettings(){
     m.appendChild(cl2);
   }
   bg.appendChild(m); return bg;
+}
+
+// ── FOOD PHOTO ANALYSIS ───────────────────────────────────────────────────────
+function mkPhotoAnalysis(){
+  const bg=d('div',''); bg.className='modal-bg';
+  bg.onclick=e=>{if(e.target===bg){S.showPhotoAnalysis=false;render();}};
+  const m=d('div',''); m.className='modal';
+  const mh=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;');
+  mh.innerHTML=`<div><div style="font-size:16px;font-weight:700;">📷 Analyse Food</div><div style="font-size:11px;color:#475569;margin-top:2px;">Photo or description → macro estimate</div></div>`;
+  const cl=d('button','background:#1f2937;border:none;color:#94a3b8;width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;');
+  cl.textContent='×'; cl.onclick=()=>{S.showPhotoAnalysis=false;render();}; mh.appendChild(cl); m.appendChild(mh);
+  const uploadArea=d('div','border:2px dashed #1f2937;border-radius:12px;padding:20px;text-align:center;margin-bottom:14px;cursor:pointer;background:#090e1a;position:relative;');
+  uploadArea.innerHTML=`<div style="font-size:28px;margin-bottom:6px;">📷</div><div style="font-size:13px;color:#94a3b8;margin-bottom:4px;">${S.photoPreview?'Photo ready — tap to change':'Tap to take or upload a photo'}</div><div style="font-size:11px;color:#374151;">Works best with a clear photo of the plated meal</div>`;
+  if(S.photoPreview){const img=document.createElement('img');img.src=S.photoPreview;img.style.cssText='max-width:100%;border-radius:8px;margin-top:10px;max-height:200px;object-fit:cover;';uploadArea.appendChild(img);}
+  const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/*';fileInput.capture='environment';
+  fileInput.style.cssText='position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
+  fileInput.addEventListener('change',e2=>{const file=e2.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{S.photoPreview=ev.target.result;S.photoBase64=ev.target.result.split(',')[1];S.photoMime=file.type;render();};reader.readAsDataURL(file);});
+  uploadArea.appendChild(fileInput); m.appendChild(uploadArea);
+  m.appendChild(secLbl('DESCRIPTION (optional — helps accuracy)'));
+  const descTa=document.createElement('textarea');descTa.className='sn-ta';
+  descTa.placeholder='e.g. "Birthday dinner — pasta, garlic bread, 2 wines, cake" or leave blank and let the photo speak';
+  descTa.style.minHeight='60px';descTa.value=S.photoDesc||'';
+  descTa.addEventListener('click',e2=>e2.stopPropagation());
+  descTa.addEventListener('input',e2=>{e2.stopPropagation();S.photoDesc=e2.target.value;});
+  m.appendChild(descTa);m.appendChild(d('div','margin-bottom:14px;'));
+  const analyseBtn=d('button',`width:100%;background:${S.photoAnalysisLoading?'#090e1a':'linear-gradient(135deg,#c2410c,#f97316)'};border:${S.photoAnalysisLoading?'1px solid #1f2937':'none'};border-radius:12px;padding:14px;color:${S.photoAnalysisLoading?'#374151':'#fff'};font-size:14px;font-weight:700;margin-bottom:14px;`);
+  analyseBtn.textContent=S.photoAnalysisLoading?'⏳  Analysing...':'Estimate Macros';
+  if(!S.photoAnalysisLoading) analyseBtn.onclick=analysePhoto;
+  m.appendChild(analyseBtn);
+  if(S.photoAnalysisResult){
+    const r=S.photoAnalysisResult;
+    const resCard=d('div','background:#090e1a;border:1px solid #f97316;border-radius:12px;padding:14px;margin-bottom:14px;');
+    resCard.innerHTML=`<div style="font-size:10px;color:#f97316;letter-spacing:.2em;font-weight:700;margin-bottom:10px;">AI ESTIMATE — approximate</div>
+      <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">${r.description||''}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;background:#0a0f1a;border-radius:8px;padding:8px;"><div style="font-size:18px;font-weight:700;color:#22c55e;">${r.protein||'?'}g</div><div style="font-size:9px;color:#475569;">PROTEIN</div></div>
+        <div style="text-align:center;background:#0a0f1a;border-radius:8px;padding:8px;"><div style="font-size:18px;font-weight:700;color:#f59e0b;">${r.calories||'?'}</div><div style="font-size:9px;color:#475569;">KCAL</div></div>
+        <div style="text-align:center;background:#0a0f1a;border-radius:8px;padding:8px;"><div style="font-size:18px;font-weight:700;color:#a78bfa;">${r.fat||'?'}g</div><div style="font-size:9px;color:#475569;">FAT</div></div>
+      </div>
+      ${r.notes?`<div style="font-size:11px;color:#475569;line-height:1.5;margin-bottom:10px;">${r.notes}</div>`:''}`;
+    const addEstBtn=d('button','width:100%;background:#15803d;border:none;border-radius:8px;padding:11px;color:#fff;font-size:13px;font-weight:700;');
+    addEstBtn.textContent='Add to Food Log';
+    addEstBtn.onclick=()=>{
+      const entry={id:Date.now(),time:timeNow(),foodName:`📷 ${r.description||'Photo meal'} (AI estimate)`,grams:0,protein:parseInt(r.protein)||0,calories:parseInt(r.calories)||0,isEstimate:true};
+      S.nut={...S.nut,foods:[...(S.nut.foods||[]),entry]};saveNut(todayKey(),S.nut);
+      S.showPhotoAnalysis=false;S.photoPreview=null;S.photoBase64=null;render();
+    };
+    resCard.appendChild(addEstBtn);m.appendChild(resCard);
+  }
+  bg.appendChild(m);return bg;
+}
+
+async function analysePhoto(){
+  if(!S.photoBase64&&!S.photoDesc?.trim()){alert('Please take a photo or add a description first.');return;}
+  S.photoAnalysisLoading=true;render();
+  const sys=`You are a sports nutritionist estimating macros from a food photo or description for a carnivore/animal-based athlete. Be practical and honest about uncertainty. Respond with valid JSON only, no markdown, no backticks: {"description":"brief name","protein":"grams as number","calories":"number","fat":"grams as number","carbs":"grams as number","notes":"1-2 sentences on confidence and assumptions","confidence":"high|medium|low"}`;
+  const userText=S.photoDesc?`Estimate macros. Description: "${S.photoDesc}".`:`Estimate macros from the photo.`;
+  const content=S.photoBase64
+    ?[{type:'image',source:{type:'base64',media_type:S.photoMime||'image/jpeg',data:S.photoBase64}},{type:'text',text:userText}]
+    :[{type:'text',text:`Food description: "${S.photoDesc}". No photo — estimate from description alone.`}];
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:sys,messages:[{role:'user',content}]})
+    });
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const text=(data.content||[]).map(b=>b.text||'').join('').trim();
+    S.photoAnalysisResult=JSON.parse(text.replace(/```json|```/g,'').trim());
+  }catch(err){S.photoAnalysisResult={description:'Analysis failed',protein:'?',calories:'?',fat:'?',carbs:'?',notes:'Error: '+err.message,confidence:'low'};}
+  S.photoAnalysisLoading=false;render();
 }
 
 render();
