@@ -57,6 +57,19 @@ const JNL_KEY      = 'surf_bjj_journal_v1';
 const SUMMARY_KEY  = 'surf_bjj_summary_v1';
 const PROGRAM_KEY  = 'surf_bjj_program_v1';
 const APIKEY_KEY   = 'surf_bjj_apikey';
+const PLAN_KEY     = 'surf_bjj_plan_v1';
+
+function savePlan(plan){
+  try{ localStorage.setItem(PLAN_KEY,JSON.stringify({date:todayKey(),plan,ticked:S.ticked,blockNotes:S.blockNotes,warmupTicked:S.warmupTicked,sessionDone:S.sessionDone,postSessionNote:S.postSessionNote,sessionAvgHR:S.sessionAvgHR,sessionAvgWatts:S.sessionAvgWatts,sessionPeakWatts:S.sessionPeakWatts,preWorkoutNote:S.preWorkoutNote,preWorkoutResponse:S.preWorkoutResponse})); }catch{}
+}
+function loadPlan(){
+  try{
+    const s=JSON.parse(localStorage.getItem(PLAN_KEY)||'null');
+    if(!s||s.date!==todayKey()) return null; // only restore today's plan
+    return s;
+  }catch{ return null; }
+}
+function clearPlan(){ try{ localStorage.removeItem(PLAN_KEY); }catch{} }
 
 function loadApiKey(){ try{ return localStorage.getItem(APIKEY_KEY)||''; }catch{ return ''; } }
 function saveApiKey(k){ try{ localStorage.setItem(APIKEY_KEY,k); }catch{} }
@@ -390,6 +403,23 @@ S.summaries = loadSummaries();
 S.programs  = loadPrograms();
 S.apiKey    = loadApiKey();
 
+// Restore today's plan if browser was closed/refreshed mid-session
+const _savedPlan = loadPlan();
+if(_savedPlan){
+  S.plan            = _savedPlan.plan;
+  S.ticked          = _savedPlan.ticked          || {};
+  S.blockNotes      = _savedPlan.blockNotes       || {};
+  S.warmupTicked    = _savedPlan.warmupTicked     || {};
+  S.sessionDone     = _savedPlan.sessionDone      || false;
+  S.postSessionNote = _savedPlan.postSessionNote  || '';
+  S.sessionAvgHR    = _savedPlan.sessionAvgHR     || '';
+  S.sessionAvgWatts = _savedPlan.sessionAvgWatts  || '';
+  S.sessionPeakWatts= _savedPlan.sessionPeakWatts || '';
+  S.preWorkoutNote  = _savedPlan.preWorkoutNote   || '';
+  S.preWorkoutResponse = _savedPlan.preWorkoutResponse || '';
+  S.screen          = 'plan'; // go straight to the plan screen
+}
+
 function freshBJJForm(){
   return {date:todayKey(),type:'bjj',location:'',techniques:[{name:'',position:'Guard',keySteps:'',notes:''}],rounds:[{partner:'',duration:'',result:'Win',submission:'',notes:''}],wins:0,losses:0,sessionNotes:'',drillNext:''};
 }
@@ -721,7 +751,7 @@ function mkPlan(){
         chk2.textContent=done2?'✓':'';
         const wtxt=d('div',`font-size:12px;color:#9ca3af;line-height:1.4;opacity:${done2?0.45:1};`); wtxt.textContent=item.trim();
         wrow.appendChild(chk2); wrow.appendChild(wtxt);
-        wrow.onclick=()=>{S.warmupTicked[wkey]=!S.warmupTicked[wkey];render();};
+        wrow.onclick=()=>{S.warmupTicked[wkey]=!S.warmupTicked[wkey];if(S.plan)savePlan(S.plan);render();};
         wu.appendChild(wrow);
       });
     } else {
@@ -732,7 +762,7 @@ function mkPlan(){
       chk2.textContent=done2?'✓':'';
       const wtxt=d('div',`font-size:12px;color:#9ca3af;line-height:1.5;opacity:${done2?0.45:1};`); wtxt.textContent=p.warmup;
       wrow.appendChild(chk2); wrow.appendChild(wtxt);
-      wrow.onclick=()=>{S.warmupTicked['wu_all']=!S.warmupTicked['wu_all'];render();};
+      wrow.onclick=()=>{S.warmupTicked['wu_all']=!S.warmupTicked['wu_all'];if(S.plan)savePlan(S.plan);render();};
       wu.appendChild(wrow);
     }
     w.appendChild(wu);
@@ -786,7 +816,7 @@ function mkPlan(){
   const psnTa=document.createElement('textarea'); psnTa.className='sn-ta';
   psnTa.placeholder='e.g. Elbow 2/10 on rows, squats strong at 70kg, right shoulder clicked, energy dropped mid-session...';
   psnTa.value=S.postSessionNote||'';
-  psnTa.addEventListener('input',e=>{ S.postSessionNote=e.target.value; S.log=S.log.map(l=>l.date===todayKey()?{...l,postSessionNote:e.target.value}:l); saveLog(); });
+  psnTa.addEventListener('input',e=>{ S.postSessionNote=e.target.value; S.log=S.log.map(l=>l.date===todayKey()?{...l,postSessionNote:e.target.value}:l); saveLog(); if(S.plan)savePlan(S.plan); });
   psnCard.appendChild(psnTa); w.appendChild(psnCard);
 
   const cb=d('button',`width:100%;background:${S.sessionDone?'#052e16':'linear-gradient(135deg,#15803d,#0f766e)'};border:${S.sessionDone?'1px solid #14532d':'none'};border-radius:12px;padding:15px;color:${S.sessionDone?'#4ade80':'#fff'};font-size:14px;font-weight:700;margin-bottom:8px;`);
@@ -827,7 +857,7 @@ function mkBlock(blk,prefix,accent,hdr,bg,border,isElbow,blockKey){
     chk.textContent=done?'✓':'';
     const tx=d('div',`flex:1;opacity:${done?.45:1};`);
     tx.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:3px;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${ex.name}</span><span style="font-size:10px;color:${accent};background:${accent}14;padding:1px 7px;border-radius:4px;">${ex.sets}</span>${ex.load?`<span style="font-size:10px;color:#f59e0b;background:#f59e0b12;padding:1px 7px;border-radius:4px;">${ex.load}</span>`:''}</div>${ex.notes?`<div style="font-size:11px;color:${isElbow?'#4ade8060':'#4b5563'};line-height:1.5;">${ex.notes}</div>`:''}`;
-    row.appendChild(chk); row.appendChild(tx); row.onclick=()=>{S.ticked[key]=!S.ticked[key];render();}; w.appendChild(row);
+    row.appendChild(chk); row.appendChild(tx); row.onclick=()=>{S.ticked[key]=!S.ticked[key];if(S.plan)savePlan(S.plan);render();}; w.appendChild(row);
   });
   if(blockKey){
     const nw=d('div',`padding:12px 16px;background:${isElbow?'#040d04':'#090e1a'};border-top:1px solid ${isElbow?'#052e16':'#111827'};`);
@@ -1713,6 +1743,7 @@ function mkJournalModal(){
 // ── API ───────────────────────────────────────────────────────────────────────
 async function genPlan(){
   S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.warmupTicked={}; S.sessionDone=false; S.postSessionNote=''; S.sessionAvgHR=''; S.sessionAvgWatts=''; S.sessionPeakWatts=''; S.preWorkoutNote=''; S.preWorkoutResponse=''; S.feedback=null; S.nutFeedback=null;
+  clearPlan(); // clear any saved plan before generating new one
   render();
   const sd=sleepDec(S.sleepH,S.sleepM),ss=sleepStr(S.sleepH,S.sleepM),gb=garminBand(S.sleepScore),shift=SHIFTS.find(x=>x.label===S.shift);
   const msg=`Today's check-in:
@@ -1732,6 +1763,7 @@ Generate today's optimal training plan.`;
     S.plan=parsed;
     S.log=[...S.log.filter(e=>e.date!==todayKey()),{date:todayKey(),sleepH:S.sleepH,sleepM:S.sleepM,sleepDec:sd,sleepStr:ss,sleepScore:S.sleepScore,rhr:S.rhr,hrv:S.hrv,energy:S.energy,bodyBattery:S.bodyBattery,stress:S.stress,respRate:S.respRate,weight:S.weight,shift:S.shift,gym:S.gym,surf:S.surf,bjj:S.bjj,readiness:parsed.readiness,readiness_score:parsed.readiness_score,session_title:parsed.session_title,completed:null,notes:S.notes}];
     saveLog();
+    savePlan(parsed); // persist plan so it survives refresh
     // Auto-generate rolling summary if sessions have grown beyond 30
     if(S.log.length>30) maybeGenerateSummary();
     S.screen='plan';
@@ -1750,7 +1782,9 @@ function markDone(){
     sessionAvgWatts:S.sessionAvgWatts||e.sessionAvgWatts||'',
     sessionPeakWatts:S.sessionPeakWatts||e.sessionPeakWatts||'',
   }:e);
-  saveLog(); render();
+  saveLog();
+  savePlan(S.plan); // keep plan visible but with sessionDone=true
+  render();
 }
 
 async function askCoach(){
