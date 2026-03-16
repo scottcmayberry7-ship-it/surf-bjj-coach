@@ -51,12 +51,12 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance:none; }
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const SURGERY_DATE = new Date('2026-04-24');
-const STORAGE_KEY = 'surf_bjj_v6';
-const NUT_KEY = 'surf_bjj_nut_v1';
-const JNL_KEY = 'surf_bjj_journal_v1';
-const SUMMARY_KEY = 'surf_bjj_summary_v1';
-const PROGRAM_KEY = 'surf_bjj_program_v1';
-const APIKEY_KEY = 'surf_bjj_apikey';
+const STORAGE_KEY  = 'surf_bjj_v6';
+const NUT_KEY      = 'surf_bjj_nut_v1';
+const JNL_KEY      = 'surf_bjj_journal_v1';
+const SUMMARY_KEY  = 'surf_bjj_summary_v1';
+const PROGRAM_KEY  = 'surf_bjj_program_v1';
+const APIKEY_KEY   = 'surf_bjj_apikey';
 
 function loadApiKey(){ try{ return localStorage.getItem(APIKEY_KEY)||''; }catch{ return ''; } }
 function saveApiKey(k){ try{ localStorage.setItem(APIKEY_KEY,k); }catch{} }
@@ -65,100 +65,100 @@ const BJJ_POSITIONS = ['Guard','Half Guard','Mount','Back Mount','Side Control',
 const SURF_CONDITIONS_WIND = ['Offshore','Onshore','Cross-shore','Glassy','Light breeze'];
 const SURF_CONDITIONS_TIDE = ['Low','Mid','High','Incoming','Outgoing'];
 const SHIFTS = [
-  {label:'Morning', times:'05:30–12:30'},
-  {label:'Day', times:'08:30–16:00'},
+  {label:'Morning',   times:'05:30–12:30'},
+  {label:'Day',       times:'08:30–16:00'},
   {label:'Afternoon', times:'12:00–21:00'},
-  {label:'Evening', times:'14:00–23:00'},
-  {label:'Off', times:'Rest day'},
+  {label:'Evening',   times:'14:00–23:00'},
+  {label:'Off',       times:'Rest day'},
 ];
 const RCOL = {GREEN:'#22c55e',AMBER:'#f59e0b',RED:'#ef4444'};
-const RBG = {GREEN:'#052e16',AMBER:'#1c1206',RED:'#1a0808'};
+const RBG  = {GREEN:'#052e16',AMBER:'#1c1206',RED:'#1a0808'};
 
 // ── FOOD DATABASE (per 100g cooked weight unless noted) ───────────────────────
 const FOODS = [
   // BEEF
-  {name:'Rump Steak', p:26, k:175, cat:'Beef'},
-  {name:'Ribeye Steak', p:24, k:291, cat:'Beef'},
-  {name:'Sirloin Steak', p:27, k:207, cat:'Beef'},
-  {name:'Eye Fillet', p:28, k:212, cat:'Beef'},
-  {name:'T-Bone Steak', p:24, k:247, cat:'Beef'},
-  {name:'Chuck Steak', p:26, k:240, cat:'Beef'},
-  {name:'Ground Beef 80/20', p:26, k:254, cat:'Beef'},
-  {name:'Ground Beef 90/10', p:28, k:196, cat:'Beef'},
-  {name:'Brisket', p:25, k:235, cat:'Beef'},
-  {name:'Beef Liver', p:29, k:175, cat:'Beef'},
-  {name:'Beef Heart', p:28, k:165, cat:'Beef'},
+  {name:'Rump Steak',           p:26, k:175, cat:'Beef'},
+  {name:'Ribeye Steak',         p:24, k:291, cat:'Beef'},
+  {name:'Sirloin Steak',        p:27, k:207, cat:'Beef'},
+  {name:'Eye Fillet',           p:28, k:212, cat:'Beef'},
+  {name:'T-Bone Steak',         p:24, k:247, cat:'Beef'},
+  {name:'Chuck Steak',          p:26, k:240, cat:'Beef'},
+  {name:'Ground Beef 80/20',    p:26, k:254, cat:'Beef'},
+  {name:'Ground Beef 90/10',    p:28, k:196, cat:'Beef'},
+  {name:'Brisket',              p:25, k:235, cat:'Beef'},
+  {name:'Beef Liver',           p:29, k:175, cat:'Beef'},
+  {name:'Beef Heart',           p:28, k:165, cat:'Beef'},
   {name:'Beef Jerky (homemade dehydrated)', p:53, k:270, cat:'Beef'},
-  {name:'Beef Jerky (commercial)', p:33, k:260, cat:'Beef'},
-  {name:'Beef Mince (lean)', p:27, k:185, cat:'Beef'},
+  {name:'Beef Jerky (commercial)',          p:33, k:260, cat:'Beef'},
+  {name:'Beef Mince (lean)',    p:27, k:185, cat:'Beef'},
   // LAMB
-  {name:'Lamb Chops', p:25, k:260, cat:'Lamb'},
-  {name:'Lamb Mince', p:24, k:258, cat:'Lamb'},
-  {name:'Lamb Shoulder', p:25, k:270, cat:'Lamb'},
-  {name:'Lamb Rack', p:22, k:294, cat:'Lamb'},
-  {name:'Lamb Cutlets', p:24, k:252, cat:'Lamb'},
+  {name:'Lamb Chops',           p:25, k:260, cat:'Lamb'},
+  {name:'Lamb Mince',           p:24, k:258, cat:'Lamb'},
+  {name:'Lamb Shoulder',        p:25, k:270, cat:'Lamb'},
+  {name:'Lamb Rack',            p:22, k:294, cat:'Lamb'},
+  {name:'Lamb Cutlets',         p:24, k:252, cat:'Lamb'},
   // PORK
-  {name:'Pork Belly', p:19, k:518, cat:'Pork'},
-  {name:'Pork Chops', p:27, k:231, cat:'Pork'},
-  {name:'Bacon (rind off)', p:37, k:458, cat:'Pork'},
-  {name:'Bacon (with rind)', p:37, k:541, cat:'Pork'},
-  {name:'Pork Ribs', p:20, k:290, cat:'Pork'},
-  {name:'Pork Mince', p:26, k:220, cat:'Pork'},
+  {name:'Pork Belly',           p:19, k:518, cat:'Pork'},
+  {name:'Pork Chops',           p:27, k:231, cat:'Pork'},
+  {name:'Bacon (rind off)',     p:37, k:458, cat:'Pork'},
+  {name:'Bacon (with rind)',    p:37, k:541, cat:'Pork'},
+  {name:'Pork Ribs',            p:20, k:290, cat:'Pork'},
+  {name:'Pork Mince',           p:26, k:220, cat:'Pork'},
   // POULTRY
-  {name:'Chicken Breast', p:31, k:165, cat:'Poultry'},
-  {name:'Chicken Thigh', p:26, k:209, cat:'Poultry'},
-  {name:'Chicken Drumstick', p:24, k:190, cat:'Poultry'},
-  {name:'Chicken Wings', p:23, k:266, cat:'Poultry'},
-  {name:'Chicken Mince', p:27, k:180, cat:'Poultry'},
+  {name:'Chicken Breast',       p:31, k:165, cat:'Poultry'},
+  {name:'Chicken Thigh',        p:26, k:209, cat:'Poultry'},
+  {name:'Chicken Drumstick',    p:24, k:190, cat:'Poultry'},
+  {name:'Chicken Wings',        p:23, k:266, cat:'Poultry'},
+  {name:'Chicken Mince',        p:27, k:180, cat:'Poultry'},
   // FISH
-  {name:'Salmon', p:25, k:208, cat:'Fish'},
+  {name:'Salmon',               p:25, k:208, cat:'Fish'},
   {name:'Tuna (canned in water)',p:26, k:116, cat:'Fish'},
   {name:'Tuna (canned in oil)', p:25, k:198, cat:'Fish'},
-  {name:'Sardines (canned)', p:25, k:208, cat:'Fish'},
-  {name:'Prawns', p:24, k:106, cat:'Fish'},
-  {name:'Barramundi', p:23, k:110, cat:'Fish'},
-  {name:'Flathead', p:22, k:95, cat:'Fish'},
+  {name:'Sardines (canned)',    p:25, k:208, cat:'Fish'},
+  {name:'Prawns',               p:24, k:106, cat:'Fish'},
+  {name:'Barramundi',           p:23, k:110, cat:'Fish'},
+  {name:'Flathead',             p:22, k:95,  cat:'Fish'},
   // EGGS — counted by number, not grams (Woolworths Free Range X-Large — official panel)
-  {name:'Whole Eggs (WW X-Large free range)', p:7, k:82, cat:'Eggs', countMode:true, unit:'egg', unitLabel:'eggs', note:'7g protein each — official WW panel'},
-  {name:'Fried Eggs (WW X-Large free range)', p:7, k:95, cat:'Eggs', countMode:true, unit:'egg', unitLabel:'eggs', note:'~5g butter added per egg'},
-  {name:'Scrambled Eggs (WW X-Large free range)',p:8, k:110, cat:'Eggs', countMode:true, unit:'egg', unitLabel:'eggs', note:'with butter/cream'},
-  {name:'Boiled Eggs (WW X-Large free range)', p:7, k:80, cat:'Eggs', countMode:true, unit:'egg', unitLabel:'eggs', note:'no added fat'},
-  {name:'Poached Eggs (WW X-Large free range)', p:7, k:80, cat:'Eggs', countMode:true, unit:'egg', unitLabel:'eggs', note:'no added fat'},
-  {name:'Egg Whites only', p:4, k:17, cat:'Eggs', countMode:true, unit:'white', unitLabel:'whites', note:'~30g per white'},
-  {name:'Whole Eggs — gram weight (per 100g)', p:12, k:142, cat:'Eggs', note:'use for mixed egg dishes'},
+  {name:'Whole Eggs (WW X-Large free range)',  p:7,  k:82,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'7g protein each — official WW panel'},
+  {name:'Fried Eggs (WW X-Large free range)',  p:7,  k:95,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'~5g butter added per egg'},
+  {name:'Scrambled Eggs (WW X-Large free range)',p:8, k:110, cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'with butter/cream'},
+  {name:'Boiled Eggs (WW X-Large free range)',  p:7,  k:80,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'no added fat'},
+  {name:'Poached Eggs (WW X-Large free range)', p:7,  k:80,  cat:'Eggs', countMode:true, unit:'egg',   unitLabel:'eggs',   note:'no added fat'},
+  {name:'Egg Whites only',                      p:4,  k:17,  cat:'Eggs', countMode:true, unit:'white', unitLabel:'whites', note:'~30g per white'},
+  {name:'Whole Eggs — gram weight (per 100g)',  p:12, k:142, cat:'Eggs', note:'use for mixed egg dishes'},
   // DAIRY
-  {name:'Butter', p:1, k:717, cat:'Dairy'},
-  {name:'Ghee', p:0, k:900, cat:'Dairy'},
+  {name:'Butter',               p:1,  k:717, cat:'Dairy'},
+  {name:'Ghee',                 p:0,  k:900, cat:'Dairy'},
   {name:'Hard Cheese (cheddar)',p:25, k:402, cat:'Dairy'},
-  {name:'Parmesan', p:35, k:431, cat:'Dairy'},
+  {name:'Parmesan',             p:35, k:431, cat:'Dairy'},
   {name:'Full Fat Greek Yoghurt',p:9, k:100, cat:'Dairy'},
-  {name:'Cream (thickened)', p:2, k:340, cat:'Dairy'},
-  {name:'Cottage Cheese', p:11, k:98, cat:'Dairy'},
+  {name:'Cream (thickened)',    p:2,  k:340, cat:'Dairy'},
+  {name:'Cottage Cheese',       p:11, k:98,  cat:'Dairy'},
   // SNACKS / OTHER
-  {name:'Beef Jerky homemade (30g serve)', p:16, k:81, cat:'Snacks'},
+  {name:'Beef Jerky homemade (30g serve)', p:16, k:81,  cat:'Snacks'},
   {name:'Beef Jerky commercial (30g serve)',p:10, k:78, cat:'Snacks'},
-  {name:'Pork Crackling', p:32, k:544, cat:'Snacks'},
-  {name:'Macadamia Nuts (30g)', p:2, k:204, cat:'Snacks'},
-  {name:'Hard Boiled Egg ×2', p:13, k:155, cat:'Snacks', note:'approx 100g'},
+  {name:'Pork Crackling',       p:32, k:544, cat:'Snacks'},
+  {name:'Macadamia Nuts (30g)', p:2,  k:204, cat:'Snacks'},
+  {name:'Hard Boiled Egg ×2',   p:13, k:155, cat:'Snacks', note:'approx 100g'},
   // SUPPLEMENTS / PROTEIN — specific products
-  {name:'Bulk Nutrients HCP (per 100g)', p:80, k:350, cat:'Supps', note:'Raw unflavoured — official ~80g/100g'},
-  {name:'Bulk Nutrients HCP (25g scoop)', p:20, k:88, cat:'Supps', note:'Standard serve — >20g protein'},
-  {name:'CollagenX Gelatin Powder (per 100g)', p:86, k:350, cat:'Supps', note:'Pure bovine gelatin — use in hot liquid'},
-  {name:'CollagenX Gelatin Powder (10g serve)', p:9, k:35, cat:'Supps', note:'1 heaped tsp — use in hot liquid/cooking'},
-  {name:'Best of the Bone concentrate (per tsp)',p:3, k:24, cat:'Supps', countMode:true, unit:'tsp', unitLabel:'tsp', note:'Official WW panel: 3.3g protein per 10g/tsp'},
-  {name:'Whey Protein Powder (per 100g)', p:80, k:380, cat:'Supps'},
+  {name:'Bulk Nutrients HCP (per 100g)',         p:80, k:350, cat:'Supps', note:'Raw unflavoured — official ~80g/100g'},
+  {name:'Bulk Nutrients HCP (25g scoop)',        p:20, k:88,  cat:'Supps', note:'Standard serve — >20g protein'},
+  {name:'CollagenX Gelatin Powder (per 100g)',   p:86, k:350, cat:'Supps', note:'Pure bovine gelatin — use in hot liquid'},
+  {name:'CollagenX Gelatin Powder (10g serve)',  p:9,  k:35,  cat:'Supps', note:'1 heaped tsp — use in hot liquid/cooking'},
+  {name:'Best of the Bone concentrate (per tsp)',p:3,  k:24,  cat:'Supps', countMode:true, unit:'tsp', unitLabel:'tsp', note:'Official WW panel: 3.3g protein per 10g/tsp'},
+  {name:'Whey Protein Powder (per 100g)',        p:80, k:380, cat:'Supps'},
 ];
 const FOOD_CATS = ['All','Beef','Lamb','Pork','Poultry','Fish','Eggs','Dairy','Snacks','Supps'];
 
 // ── SUPPLEMENTS ───────────────────────────────────────────────────────────────
 const SUPPS = [
-  {key:'creatine', name:'Creatine', dose:'5g', timing:'Any time daily', color:'#22c55e', why:'Reduces muscle loss during post-surgery immobilisation'},
-  {key:'omega3', name:'Omega-3', dose:'3–4g EPA+DHA', timing:'With largest meal', color:'#0ea5e9', why:'Anti-inflammatory — elbow tendon & labral repair'},
-  {key:'vitD3', name:'Vitamin D3', dose:'4000–5000 IU', timing:'With fat-containing meal', color:'#f59e0b', why:'Surgical recovery, immune function, bone density'},
-  {key:'vitK2', name:'Vitamin K2 (MK-7)', dose:'100–200mcg', timing:'Take with D3', color:'#f97316', why:'Works with D3 — directs calcium to bones not arteries'},
-  {key:'magnesium', name:'Magnesium Glycinate', dose:'400mg', timing:'30–60 min before bed', color:'#a78bfa', why:'Sleep quality on rotating shifts, muscle recovery'},
-  {key:'collagen', name:'Collagen + Vit C', dose:'15g + 50mg Vit C','timing':'30–60 min pre-training', color:'#22d3ee', why:'Tendon synthesis window — critical timing for elbow rehab'},
-  {key:'zinc', name:'Zinc', dose:'25–30mg', timing:'With meal, away from iron', color:'#4ade80', why:'Tissue repair, wound healing, immune function'},
+  {key:'creatine',  name:'Creatine',           dose:'5g',              timing:'Any time daily',                color:'#22c55e', why:'Reduces muscle loss during post-surgery immobilisation'},
+  {key:'omega3',    name:'Omega-3',             dose:'3–4g EPA+DHA',    timing:'With largest meal',             color:'#0ea5e9', why:'Anti-inflammatory — elbow tendon & labral repair'},
+  {key:'vitD3',     name:'Vitamin D3',          dose:'4000–5000 IU',    timing:'With fat-containing meal',      color:'#f59e0b', why:'Surgical recovery, immune function, bone density'},
+  {key:'vitK2',     name:'Vitamin K2 (MK-7)',   dose:'100–200mcg',      timing:'Take with D3',                  color:'#f97316', why:'Works with D3 — directs calcium to bones not arteries'},
+  {key:'magnesium', name:'Magnesium Glycinate',  dose:'400mg',           timing:'30–60 min before bed',          color:'#a78bfa', why:'Sleep quality on rotating shifts, muscle recovery'},
+  {key:'collagen',  name:'Collagen + Vit C',    dose:'15g + 50mg Vit C','timing':'30–60 min pre-training',       color:'#22d3ee', why:'Tendon synthesis window — critical timing for elbow rehab'},
+  {key:'zinc',      name:'Zinc',                dose:'25–30mg',         timing:'With meal, away from iron',     color:'#4ade80', why:'Tissue repair, wound healing, immune function'},
 ];
 
 // ── SEED LOG ──────────────────────────────────────────────────────────────────
@@ -181,15 +181,15 @@ const SEED_LOG = [
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-function daysLeft() { return Math.max(0,Math.ceil((SURGERY_DATE-new Date())/86400000)); }
-function weeksLeft() { return Math.ceil(daysLeft()/7); }
-function todayKey() { return new Date().toISOString().slice(0,10); }
+function daysLeft()   { return Math.max(0,Math.ceil((SURGERY_DATE-new Date())/86400000)); }
+function weeksLeft()  { return Math.ceil(daysLeft()/7); }
+function todayKey()   { return new Date().toISOString().slice(0,10); }
 function todayLabel() { return new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'}).toUpperCase(); }
 function sleepDec(h,m){ return +(h+m/60).toFixed(2); }
 function sleepStr(h,m){ return m>0?`${h}h ${m}m`:`${h}h`; }
 function clamp(v,a,b) { return Math.min(b,Math.max(a,v)); }
-function timeNow() { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; }
-function durStr(ms) { const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); return `${h}h ${String(m).padStart(2,'0')}m`; }
+function timeNow()    { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; }
+function durStr(ms)   { const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000); return `${h}h ${String(m).padStart(2,'0')}m`; }
 function garminBand(s){
   if(!s&&s!==0) return {label:'—',color:'#475569'};
   if(s>=90) return {label:'Excellent',color:'#22c55e'};
@@ -278,7 +278,9 @@ let S = {
   shift:'Day',gym:'Home',surf:false,bjj:false,
   weight:'',notes:'',
   plan:null,loading:false,error:null,
-  ticked:{},blockNotes:{},sessionDone:false,postSessionNote:'',
+  ticked:{},blockNotes:{},warmupTicked:{},sessionDone:false,postSessionNote:'',
+  sessionAvgHR:'',
+  preWorkoutNote:'',preWorkoutResponse:'',preWorkoutLoading:false,
   log:[],
   showAddModal:false,
   addForm:{date:todayKey(),sleepH:7,sleepM:0,sleepScore:75,rhr:52,hrv:55,energy:7,bodyBattery:'',weight:'',shift:'Day',gym:'Home',surf:false,bjj:false,session_title:'',readiness:'GREEN',notes:''},
@@ -307,12 +309,12 @@ let S = {
   // api key
   apiKey:'', showSettings:false,
 };
-S.log = loadLog();
-S.nut = loadNut(todayKey());
-S.journal = loadJournal();
+S.log       = loadLog();
+S.nut       = loadNut(todayKey());
+S.journal   = loadJournal();
 S.summaries = loadSummaries();
-S.programs = loadPrograms();
-S.apiKey = loadApiKey();
+S.programs  = loadPrograms();
+S.apiKey    = loadApiKey();
 
 function freshBJJForm(){
   return {date:todayKey(),type:'bjj',location:'',techniques:[{name:'',position:'Guard',keySteps:'',notes:''}],rounds:[{partner:'',duration:'',result:'Win',submission:'',notes:''}],wins:0,losses:0,sessionNotes:'',drillNext:''};
@@ -373,7 +375,7 @@ RECENT LOG (last 30 sessions):
 ${recent}
 
 JSON only, no markdown:
-{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics and post-session notes","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"title","session_type":"HOME_STRENGTH|HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"warmup","blocks":[{"title":"name","exercises":[{"name":"ex","sets":"3x8","load":"specific load from baselines","notes":"cue + arm mod"}]}],"elbow_block":{"title":"Daily Elbow Rehab — 8 min","exercises":[{"name":"ex","sets":"sets","load":"load","notes":"specific note for this week"}]},"cooldown":"cooldown","coach_note":"personalised insight referencing history and baselines","surf_bjj_note":"advice today","surgery_note":"note given ${dl} days to right shoulder surgery"}`;
+{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics and post-session notes","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"title","session_type":"HOME_STRENGTH|HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"warmup as numbered steps e.g. 1. 5 min row HR 120-130. 2. 10 band pull-aparts. 3. 10 thoracic rotations","blocks":[{"title":"name","exercises":[{"name":"ex","sets":"3x8","load":"specific load from baselines","notes":"cue + arm mod"}]}],"elbow_block":{"title":"Daily Elbow Rehab — 8 min","exercises":[{"name":"ex","sets":"sets","load":"load","notes":"specific note for this week"}]},"conditioning":{"recommended":true,"description":"e.g. 20 min Echo bike or 15 min ski erg","duration_mins":20,"target_hr":"115-130 bpm","zone":"Zone 2","notes":"specific coaching note on conditioning today"},"cooldown":"cooldown","coach_note":"personalised insight referencing history and baselines","surf_bjj_note":"advice today","surgery_note":"note given ${dl} days to right shoulder surgery"}`;
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
@@ -382,20 +384,20 @@ function render(){
   app.innerHTML='';
   app.appendChild(mkNav());
   const w=d('div','max-width:660px;margin:0 auto;padding:20px 16px 80px;');
-  if (S.screen==='checkin') w.appendChild(mkCheckin());
-  else if(S.screen==='plan') w.appendChild(mkPlan());
-  else if(S.screen==='history') w.appendChild(mkHistory());
+  if     (S.screen==='checkin')   w.appendChild(mkCheckin());
+  else if(S.screen==='plan')      w.appendChild(mkPlan());
+  else if(S.screen==='history')   w.appendChild(mkHistory());
   else if(S.screen==='nutrition') w.appendChild(mkNutrition());
-  else if(S.screen==='journal') w.appendChild(mkJournal());
+  else if(S.screen==='journal')   w.appendChild(mkJournal());
   app.appendChild(w);
-  if(S.showAddModal) app.appendChild(mkAddModal());
-  if(S.showAddFood) app.appendChild(mkAddFoodModal());
+  if(S.showAddModal)  app.appendChild(mkAddModal());
+  if(S.showAddFood)   app.appendChild(mkAddFoodModal());
   if(S.suppDetail!==null) app.appendChild(mkSuppDetail());
-  if(S.showJournalModal) app.appendChild(mkJournalModal());
-  if(S.journalViewEntry) app.appendChild(mkJournalView());
+  if(S.showJournalModal)  app.appendChild(mkJournalModal());
+  if(S.journalViewEntry)  app.appendChild(mkJournalView());
   if(S.showFeedbackModal) app.appendChild(mkFeedbackModal());
-  if(S.showGoalModal) app.appendChild(mkGoalModal());
-  if(S.showSettings) app.appendChild(mkSettings());
+  if(S.showGoalModal)     app.appendChild(mkGoalModal());
+  if(S.showSettings)      app.appendChild(mkSettings());
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
@@ -479,7 +481,7 @@ function mkCheckin(){
   const hC=S.hrv>=45?'#22c55e':S.hrv>=34?'#f59e0b':'#ef4444';
   mc.appendChild(mkSliderStepper(S.hrv,20,120,hC,v=>{S.hrv=v;render();},`${S.hrv} ms`));
   mc.appendChild(d('div','margin-bottom:16px;'));
-  mc.appendChild(secLbl('BODY BATTERY · STRESS · RESP RATE'));
+  mc.appendChild(secLbl('BODY BATTERY  ·  STRESS  ·  RESP RATE'));
   const tr=d('div','display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px;');
   [{key:'bodyBattery',lbl:'Body\nBattery',unit:'/100',col:bbColor(S.bodyBattery)},{key:'stress',lbl:'Stress',unit:'/100',col:'#a78bfa'},{key:'respRate',lbl:'Resp\nRate',unit:'/min',col:'#22d3ee'}].forEach(f=>{
     const c=d('div','display:flex;flex-direction:column;align-items:center;gap:4px;');
@@ -546,7 +548,7 @@ function mkCheckin(){
   ta.value=S.notes; ta.addEventListener('input',e=>{S.notes=e.target.value;}); nc.appendChild(ta); w.appendChild(nc);
   // GENERATE
   const gb2=d('button',`width:100%;background:${S.loading?'#090e1a':'linear-gradient(135deg,#1d4ed8,#7c3aed)'};border:${S.loading?'1px solid #1f2937':'none'};border-radius:13px;padding:17px;color:${S.loading?'#374151':'#fff'};font-size:15px;font-weight:700;letter-spacing:.05em;margin-bottom:8px;`);
-  gb2.textContent=S.loading?'⏳ Building your plan...':'→ Generate Today\'s Plan';
+  gb2.textContent=S.loading?'⏳  Building your plan...':'→  Generate Today\'s Plan';
   if(!S.loading) gb2.onclick=genPlan; w.appendChild(gb2);
   const hint=d('div','text-align:center;font-size:10px;color:#1f2937;margin-bottom:10px;'); hint.textContent='Open in Chrome or Safari — not a file manager.'; w.appendChild(hint);
 
@@ -607,19 +609,98 @@ function mkPlan(){
     pg.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;color:#4b5563;letter-spacing:.1em;">SESSION PROGRESS</span><span style="font-size:11px;font-weight:700;color:${prog===100?'#22c55e':'#9ca3af'};">${done}/${totEx}</span></div><div style="height:4px;background:#1f2937;border-radius:2px;"><div style="height:100%;width:${prog}%;background:${prog===100?'#22c55e':'#22d3ee'};border-radius:2px;transition:width .3s;"></div></div>`;
     w.appendChild(pg);
   }
+  // ── PRE-WORKOUT QUERY ──
+  const pwCard=d('div','background:#0b1120;border:1px solid #1f2937;border-radius:12px;padding:14px 16px;margin-bottom:10px;');
+  pwCard.innerHTML=`<div style="font-size:10px;color:#f59e0b;letter-spacing:.2em;font-weight:700;margin-bottom:6px;">💬 QUESTION THE PLAN</div><div style="font-size:11px;color:#475569;margin-bottom:8px;line-height:1.5;">Don't have equipment? Want an alternative? Ask before you start.</div>`;
+  const pwTa=document.createElement('textarea'); pwTa.className='sn-ta'; pwTa.style.minHeight='52px';
+  pwTa.placeholder='e.g. I don\'t have a landmine — what\'s an alternative? / Can I swap the row for bike today?';
+  pwTa.value=S.preWorkoutNote||'';
+  pwTa.addEventListener('input',e2=>{e2.stopPropagation();S.preWorkoutNote=e2.target.value;});
+  pwCard.appendChild(pwTa);
+  const pwBtn=d('button',`width:100%;background:${S.preWorkoutLoading?'#090e1a':'#f59e0b18'};border:1px solid #f59e0b40;border-radius:8px;padding:10px;color:${S.preWorkoutLoading?'#374151':'#f59e0b'};font-size:12px;font-weight:700;margin-top:8px;`);
+  pwBtn.textContent=S.preWorkoutLoading?'⏳  Getting answer...':'Ask Coach';
+  if(!S.preWorkoutLoading) pwBtn.onclick=askCoach;
+  pwCard.appendChild(pwBtn);
+  if(S.preWorkoutResponse){
+    const pwResp=d('div','background:#090e1a;border-left:3px solid #f59e0b;border-radius:0 8px 8px 0;padding:10px 12px;margin-top:8px;');
+    pwResp.innerHTML=`<div style="font-size:9px;color:#f59e0b;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">COACH RESPONSE</div><div style="font-size:12px;color:#94a3b8;line-height:1.6;white-space:pre-wrap;">${S.preWorkoutResponse}</div>`;
+    pwCard.appendChild(pwResp);
+  }
+  w.appendChild(pwCard);
+
+  // ── WARM-UP — tickable items ──
   if(p.warmup){
     const wu=d('div','background:#0b1120;border-left:3px solid #22d3ee;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:10px;');
-    wu.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">WARM-UP</div><p style="font-size:12px;color:#9ca3af;margin:0;line-height:1.5;">${p.warmup}</p>`;
+    const wuHdr=d('div','font-size:9px;color:#22d3ee;letter-spacing:.2em;font-weight:700;margin-bottom:8px;'); wuHdr.textContent='WARM-UP'; wu.appendChild(wuHdr);
+    // Parse warmup into numbered items
+    const wuItems=p.warmup.split(/\d+\.\s+/).filter(Boolean).length>1
+      ? p.warmup.split(/\d+\.\s+/).filter(Boolean)
+      : p.warmup.split(/[.\n]+/).map(s=>s.trim()).filter(s=>s.length>4);
+    if(wuItems.length>1){
+      wuItems.forEach((item,wi)=>{
+        const wkey=`wu_${wi}`;
+        const done2=!!S.warmupTicked[wkey];
+        const wrow=d('div',`display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #0d1117;cursor:pointer;background:${done2?'#071a07':'transparent'};`);
+        const chk2=d('div',`width:18px;height:18px;border-radius:3px;flex-shrink:0;margin-top:1px;border:1.5px solid ${done2?'#22c55e':'#1f2937'};background:${done2?'#22c55e':'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;`);
+        chk2.textContent=done2?'✓':'';
+        const wtxt=d('div',`font-size:12px;color:#9ca3af;line-height:1.4;opacity:${done2?0.45:1};`); wtxt.textContent=item.trim();
+        wrow.appendChild(chk2); wrow.appendChild(wtxt);
+        wrow.onclick=()=>{S.warmupTicked[wkey]=!S.warmupTicked[wkey];render();};
+        wu.appendChild(wrow);
+      });
+    } else {
+      // Fallback single tick
+      const wrow=d('div','display:flex;gap:10px;align-items:center;cursor:pointer;');
+      const done2=!!S.warmupTicked['wu_all'];
+      const chk2=d('div',`width:18px;height:18px;border-radius:3px;flex-shrink:0;border:1.5px solid ${done2?'#22c55e':'#1f2937'};background:${done2?'#22c55e':'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;`);
+      chk2.textContent=done2?'✓':'';
+      const wtxt=d('div',`font-size:12px;color:#9ca3af;line-height:1.5;opacity:${done2?0.45:1};`); wtxt.textContent=p.warmup;
+      wrow.appendChild(chk2); wrow.appendChild(wtxt);
+      wrow.onclick=()=>{S.warmupTicked['wu_all']=!S.warmupTicked['wu_all'];render();};
+      wu.appendChild(wrow);
+    }
     w.appendChild(wu);
   }
+
   (p.blocks||[]).forEach((blk,bi)=>w.appendChild(mkBlock(blk,`b${bi}`,'#22d3ee',`BLOCK ${bi+1} · ${(blk.title||'').toUpperCase()}`,'#0b1120','#111827',false,`block_${bi}`)));
   if(p.elbow_block) w.appendChild(mkBlock(p.elbow_block,'elbow','#4ade80','🩹 DAILY ELBOW REHAB','#060f06','#14532d',true,'elbow_rehab'));
+
+  // ── CONDITIONING BLOCK ──
+  if(p.conditioning){
+    const cond=p.conditioning;
+    const condCard=d('div',`background:${cond.recommended?'#0a0f1a':'#0b1120'};border:1px solid ${cond.recommended?'#f59e0b40':'#1f2937'};border-radius:12px;margin-bottom:10px;overflow:hidden;`);
+    const condHdr=d('div',`padding:11px 16px;border-bottom:1px solid ${cond.recommended?'#f59e0b20':'#0d1117'};display:flex;justify-content:space-between;align-items:center;background:${cond.recommended?'#f59e0b08':'transparent'};`);
+    condHdr.innerHTML=`<span style="font-size:10px;font-weight:700;color:${cond.recommended?'#f59e0b':'#475569'};letter-spacing:.15em;">🚴 CONDITIONING${cond.recommended?'':' — OPTIONAL TODAY'}</span>${cond.zone?`<span style="font-size:9px;color:#475569;">${cond.zone}</span>`:''}`;
+    condCard.appendChild(condHdr);
+    const condBody=d('div','padding:12px 16px;');
+    condBody.innerHTML=`<div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:6px;">${cond.description||''}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        ${cond.duration_mins?`<span style="font-size:11px;color:#f59e0b;background:#f59e0b14;padding:2px 8px;border-radius:4px;">⏱ ${cond.duration_mins} min</span>`:''}
+        ${cond.target_hr?`<span style="font-size:11px;color:#ef4444;background:#ef444414;padding:2px 8px;border-radius:4px;">❤ ${cond.target_hr}</span>`:''}
+      </div>
+      ${cond.notes?`<div style="font-size:11px;color:#475569;line-height:1.5;">${cond.notes}</div>`:''}`;
+    condCard.appendChild(condBody);
+    // Ave HR input for conditioning
+    const hrRow=d('div','padding:10px 16px;border-top:1px solid #0d1117;display:flex;align-items:center;gap:12px;background:#090e1a;');
+    hrRow.innerHTML=`<span style="font-size:11px;color:#475569;flex-shrink:0;">Session avg HR:</span>`;
+    const hrInp=document.createElement('input'); hrInp.type='number'; hrInp.min=60; hrInp.max=220;
+    hrInp.placeholder='e.g. 125'; hrInp.value=S.sessionAvgHR||''; hrInp.className='num-inp';
+    hrInp.style.cssText='color:#ef4444;border-color:#ef444440;width:80px;font-size:16px;';
+    hrInp.addEventListener('click',e2=>e2.stopPropagation());
+    hrInp.addEventListener('input',e2=>{e2.stopPropagation();S.sessionAvgHR=e2.target.value;S.log=S.log.map(l=>l.date===todayKey()?{...l,sessionAvgHR:e2.target.value}:l);saveLog();});
+    const hrUnit=d('span','font-size:13px;color:#475569;'); hrUnit.textContent='bpm';
+    hrRow.appendChild(hrInp); hrRow.appendChild(hrUnit);
+    condCard.appendChild(hrRow);
+    w.appendChild(condCard);
+  }
+
   if(p.cooldown){
     const cd=d('div','background:#0b1120;border-left:3px solid #374151;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:14px;');
     cd.innerHTML=`<div style="font-size:9px;color:#374151;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">COOL-DOWN</div><p style="font-size:12px;color:#4b5563;margin:0;line-height:1.5;">${p.cooldown}</p>`;
     w.appendChild(cd);
   }
-  // Post-session notes — always editable, even after completion
+
+  // Post-session notes
   const psnCard=d('div','background:#0d1117;border:1px solid #7c3aed40;border-radius:12px;padding:16px;margin-bottom:14px;');
   psnCard.innerHTML=`<div style="font-size:10px;color:#7c3aed;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">POST-SESSION NOTES</div><div style="font-size:11px;color:#475569;margin-bottom:6px;line-height:1.5;">How did it go? Pain, fatigue, loads — feeds into tomorrow's plan.</div>`;
   const psnTa=document.createElement('textarea'); psnTa.className='sn-ta';
@@ -629,30 +710,18 @@ function mkPlan(){
   psnCard.appendChild(psnTa); w.appendChild(psnCard);
 
   const cb=d('button',`width:100%;background:${S.sessionDone?'#052e16':'linear-gradient(135deg,#15803d,#0f766e)'};border:${S.sessionDone?'1px solid #14532d':'none'};border-radius:12px;padding:15px;color:${S.sessionDone?'#4ade80':'#fff'};font-size:14px;font-weight:700;margin-bottom:8px;`);
-  cb.textContent=S.sessionDone?'✓ Session logged':'Mark session complete';
+  cb.textContent=S.sessionDone?'✓  Session logged':'Mark session complete';
   if(!S.sessionDone) cb.onclick=markDone; w.appendChild(cb);
 
-  // Edit session button — always visible once logged, lets you add more work or amend notes
+  // Edit session button
   if(S.sessionDone){
     const editRow=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;');
-
     const editBtn=d('button','background:#0b1120;border:1px solid #334155;border-radius:10px;padding:12px;color:#94a3b8;font-size:12px;font-weight:700;');
-    editBtn.innerHTML='✎ Edit / Add to Session';
-    editBtn.onclick=()=>{
-      // Reopen session for editing — keeps it logged but unlocks all note fields
-      S.sessionDone=false; S.feedback=null; render();
-    };
-
-    const relogBtn=d('button','background:#052e16;border:1px solid #14532d;border-radius:10px;padding:12px;color:#4ade80;font-size:12px;font-weight:700;');
-    relogBtn.innerHTML='✓ Re-log Session';
-    relogBtn.style.display='none'; // only shows when editing
-
-    editRow.appendChild(editBtn);
-    w.appendChild(editRow);
-
-    // Feedback button
+    editBtn.innerHTML='✎  Edit / Add to Session';
+    editBtn.onclick=()=>{ S.sessionDone=false; S.feedback=null; render(); };
+    editRow.appendChild(editBtn); w.appendChild(editRow);
     const fbBtn=d('button',`width:100%;background:${S.feedbackLoading?'#090e1a':'#0d1117'};border:1px solid #7c3aed60;border-radius:12px;padding:15px;color:${S.feedbackLoading?'#374151':'#a78bfa'};font-size:14px;font-weight:700;margin-bottom:8px;`);
-    fbBtn.textContent=S.feedbackLoading?'⏳ Analysing session...':'📊 Session Feedback & Next Session Preview';
+    fbBtn.textContent=S.feedbackLoading?'⏳  Analysing session...':'📊  Session Feedback & Next Session Preview';
     if(!S.feedbackLoading) fbBtn.onclick=genFeedback;
     w.appendChild(fbBtn);
     if(S.feedback){
@@ -717,7 +786,7 @@ function mkNutrition(){
     fi.innerHTML=`<div style="font-size:11px;color:#f59e0b;letter-spacing:.1em;margin-bottom:6px;">CURRENTLY FASTING</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">${fastDur}</div>${nut.eatEnd?`<div style="font-size:10px;color:#475569;margin-top:4px;">Since last ate: ${new Date(nut.eatEnd).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}</div>`:''}`;
     fc.appendChild(fi);
     const bb=d('button','width:100%;background:#f59e0b;border:none;border-radius:10px;padding:13px;color:#000;font-size:14px;font-weight:700;');
-    bb.textContent='🍴 Break Fast — Start Eating';
+    bb.textContent='🍴  Break Fast — Start Eating';
     bb.onclick=()=>{ S.nut={...nut,eatStart:new Date().toISOString()}; saveNut(todayKey(),S.nut); render(); };
     fc.appendChild(bb);
   } else if(!nut.eatEnd){
@@ -727,7 +796,7 @@ function mkNutrition(){
     fi.innerHTML=`<div style="font-size:11px;color:#22c55e;letter-spacing:.1em;margin-bottom:6px;">EATING WINDOW OPEN</div><div style="font-size:32px;font-weight:900;color:#22c55e;">${eatDur}</div><div style="font-size:10px;color:#475569;margin-top:4px;">Started eating: ${new Date(nut.eatStart).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}</div>`;
     fc.appendChild(fi);
     const bb=d('button','width:100%;background:#22c55e;border:none;border-radius:10px;padding:13px;color:#000;font-size:14px;font-weight:700;');
-    bb.textContent='⏹ Done Eating — Start Fast';
+    bb.textContent='⏹  Done Eating — Start Fast';
     bb.onclick=()=>{ S.nut={...nut,eatEnd:new Date().toISOString()}; saveNut(todayKey(),S.nut); render(); };
     fc.appendChild(bb);
   } else {
@@ -901,7 +970,7 @@ function renderFoodList(modal){
           if(pv2){
             const p2=Math.round(food.p*S.foodGrams/100);
             const k2=Math.round(food.k*S.foodGrams/100);
-            pv2.innerHTML=`<span style="font-size:20px;font-weight:700;color:#22c55e;">+${p2}g protein</span> <span style="font-size:14px;color:#475569;">${k2} kcal</span>`;
+            pv2.innerHTML=`<span style="font-size:20px;font-weight:700;color:#22c55e;">+${p2}g protein</span>  <span style="font-size:14px;color:#475569;">${k2} kcal</span>`;
           }
         });
         gi.addEventListener('change',e2=>e2.stopPropagation());
@@ -913,7 +982,7 @@ function renderFoodList(modal){
       // Preview
       const pv=d('div','background:#0a0f1a;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center;');
       pv.id='food-preview';
-      pv.innerHTML=`<span style="font-size:20px;font-weight:700;color:#22c55e;">+${pPer}g protein</span> <span style="font-size:14px;color:#475569;">${kPer} kcal</span>`;
+      pv.innerHTML=`<span style="font-size:20px;font-weight:700;color:#22c55e;">+${pPer}g protein</span>  <span style="font-size:14px;color:#475569;">${kPer} kcal</span>`;
       inner.appendChild(pv);
 
       const addBtn=d('button','width:100%;background:linear-gradient(135deg,#15803d,#0f766e);border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:700;');
@@ -1179,9 +1248,9 @@ function mkJournal(){
       if(entry.drillNext) chips.innerHTML+=`<span style="font-size:10px;color:#a78bfa;background:#a78bfa18;padding:2px 8px;border-radius:4px;">Drill: ${entry.drillNext.slice(0,30)}${entry.drillNext.length>30?'...':''}</span>`;
     } else {
       if(entry.swellSize) chips.innerHTML+=`<span style="font-size:10px;color:${ac};background:${ac}18;padding:2px 8px;border-radius:4px;">${entry.swellSize}</span>`;
-      if(entry.wind) chips.innerHTML+=`<span style="font-size:10px;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:4px;">${entry.wind}</span>`;
-      if(entry.rating) chips.innerHTML+=`<span style="font-size:10px;color:#f59e0b;background:#f59e0b18;padding:2px 8px;border-radius:4px;">${entry.rating}/10</span>`;
-      if(entry.board) chips.innerHTML+=`<span style="font-size:10px;color:#475569;background:#1e293b;padding:2px 8px;border-radius:4px;">${entry.board}</span>`;
+      if(entry.wind)      chips.innerHTML+=`<span style="font-size:10px;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:4px;">${entry.wind}</span>`;
+      if(entry.rating)    chips.innerHTML+=`<span style="font-size:10px;color:#f59e0b;background:#f59e0b18;padding:2px 8px;border-radius:4px;">${entry.rating}/10</span>`;
+      if(entry.board)     chips.innerHTML+=`<span style="font-size:10px;color:#475569;background:#1e293b;padding:2px 8px;border-radius:4px;">${entry.board}</span>`;
     }
     card.appendChild(chips);
     if(entry.sessionNotes){
@@ -1499,7 +1568,7 @@ function mkJournalModal(){
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function genPlan(){
-  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.sessionDone=false; S.postSessionNote='';
+  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.warmupTicked={}; S.sessionDone=false; S.postSessionNote=''; S.sessionAvgHR=''; S.preWorkoutNote=''; S.preWorkoutResponse=''; S.feedback=null;
   render();
   const sd=sleepDec(S.sleepH,S.sleepM),ss=sleepStr(S.sleepH,S.sleepM),gb=garminBand(S.sleepScore),shift=SHIFTS.find(x=>x.label===S.shift);
   const msg=`Today's check-in:
@@ -1531,10 +1600,28 @@ function markDone(){
   S.log=S.log.map(e=>e.date===todayKey()?{
     ...e,
     completed:S.plan?.session_title||'Done',
-    blockNotes:{...(e.blockNotes||{}), ...S.blockNotes},
+    blockNotes:{...(e.blockNotes||{}),...S.blockNotes},
     postSessionNote:S.postSessionNote||e.postSessionNote||'',
+    sessionAvgHR:S.sessionAvgHR||e.sessionAvgHR||'',
   }:e);
   saveLog(); render();
+}
+
+async function askCoach(){
+  if(!S.preWorkoutNote?.trim()) return;
+  S.preWorkoutLoading=true; render();
+  const sys=`You are an elite S&C coach. An athlete is about to start their training session and has a quick question or request about today's plan. Answer concisely and practically — 2-4 sentences max. If they need an equipment alternative, give one specific substitution with sets/reps. Left elbow lateral epicondylalgia — no pronated gripping. Right shoulder pre-surgery — no heavy overhead.`;
+  const msg=`Today's plan: ${JSON.stringify(S.plan?.blocks?.map(b=>({title:b.title,exercises:b.exercises?.map(e=>e.name)})))}\n\nAthlete question: "${S.preWorkoutNote}"`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:sys,messages:[{role:'user',content:msg}]})
+    });
+    const data=await res.json();
+    S.preWorkoutResponse=(data.content||[]).map(b=>b.text||'').join('').trim();
+  }catch(err){ S.preWorkoutResponse='Could not get response — check connection.'; }
+  S.preWorkoutLoading=false; render();
 }
 
 // ── SESSION FEEDBACK & NEXT SESSION ──────────────────────────────────────────
@@ -1639,10 +1726,10 @@ function mkFeedbackModal(){
   // Feedback sections
   const fbSecs=[
     {key:'performance', label:'PERFORMANCE', color:'#22d3ee', icon:'💪'},
-    {key:'elbow', label:'LEFT ELBOW', color:'#4ade80', icon:'🩹'},
+    {key:'elbow',       label:'LEFT ELBOW',  color:'#4ade80', icon:'🩹'},
     {key:'fatigue_signal', label:'FATIGUE SIGNAL', color:'#f59e0b', icon:'⚡'},
-    {key:'highlight', label:'SESSION HIGHLIGHT', color:'#22c55e', icon:'✓'},
-    {key:'watch', label:'WATCH THIS', color:'#ef4444', icon:'⚠'},
+    {key:'highlight',   label:'SESSION HIGHLIGHT', color:'#22c55e', icon:'✓'},
+    {key:'watch',       label:'WATCH THIS',  color:'#ef4444', icon:'⚠'},
   ];
   const fbGrid=d('div','display:grid;gap:8px;margin-bottom:20px;');
   fbSecs.forEach(s=>{
@@ -1797,7 +1884,7 @@ function mkGoalModal(){
   }
 
   const genBtn=d('button',`width:100%;background:${S.goalLoading?'#090e1a':'linear-gradient(135deg,#1d4ed8,#7c3aed)'};border:${S.goalLoading?'1px solid #1f2937':'none'};border-radius:12px;padding:15px;color:${S.goalLoading?'#374151':'#fff'};font-size:14px;font-weight:700;margin-bottom:14px;`);
-  genBtn.textContent=S.goalLoading?'⏳ Re-evaluating your program...':'⚡ Generate New Program Context';
+  genBtn.textContent=S.goalLoading?'⏳  Re-evaluating your program...':'⚡  Generate New Program Context';
   if(!S.goalLoading) genBtn.onclick=genGoalUpdate;
   m.appendChild(genBtn);
 
