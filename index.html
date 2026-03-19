@@ -483,7 +483,23 @@ function sysPrompt(){
   const recentNotes=S.log.slice(-10).filter(e=>e.postSessionNote).map(e=>`${e.date} [${e.session_type||e.session_title||'session'}]: ${e.postSessionNote.slice(0,300)}`).join('\n');
 
   // ── ELBOW PROGRESSION ANALYSIS ──
-  const elbowNotes=S.log.slice(-14).filter(e=>e.postSessionNote&&(e.postSessionNote.toLowerCase().includes('elbow')||e.postSessionNote.toLowerCase().includes('eccentric')||e.postSessionNote.toLowerCase().includes('isometric'))).map(e=>`${e.date}: ${e.postSessionNote.slice(0,200)}`).join('\n');
+  // Get elbow-relevant sessions, sorted oldest to newest
+  const elbowSessions=S.log.slice(-20).filter(e=>e.postSessionNote&&
+    (e.postSessionNote.toLowerCase().includes('elbow')||
+     e.postSessionNote.toLowerCase().includes('eccentric')||
+     e.postSessionNote.toLowerCase().includes('isometric')||
+     e.postSessionNote.toLowerCase().includes('wrist ext')));
+  // Most recent elbow session is the current status — most important
+  const latestElbow=elbowSessions[elbowSessions.length-1];
+  const prevElbow=elbowSessions[elbowSessions.length-2];
+  const elbowCurrentStatus=latestElbow
+    ?`MOST RECENT (${latestElbow.date}): ${latestElbow.postSessionNote.slice(0,300)}`
+    :'No recent elbow data';
+  const elbowPrevStatus=prevElbow
+    ?`PREVIOUS (${prevElbow.date}): ${prevElbow.postSessionNote.slice(0,200)}`
+    :'';
+  // Full history for pattern context (oldest first)
+  const elbowHistory=elbowSessions.slice(-6).map(e=>`${e.date}: ${e.postSessionNote.slice(0,150)}`).join('\n');
 
   // ── YESTERDAY'S NUTRITION ──
   const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
@@ -518,21 +534,28 @@ Last session: ${lastType}
 ${consecutiveLower>=2?`Note: Lower body has been done ${consecutiveLower} sessions consecutively — factor into recovery when choosing today's session type.`:''}${consecutiveUpper>=2?`Note: Upper body has been done ${consecutiveUpper} sessions consecutively.`:''}${mobilityCount===0&&last10.length>=7?'Note: No dedicated mobility session in last 10 days.':''}
 Use this context alongside today\'s readiness metrics to choose the most appropriate session. The athlete\'s metrics, recovery status, and sport schedule should drive the decision — not rigid rotation rules.
 
-━━ ELBOW REHAB — MANDATORY DAILY ━━
-This block appears in EVERY session. Progress based on pain scores in recent notes below.
-PROGRESSION PROTOCOL:
-- Stage 1 — Isometrics only: 3kg 4×35sec, pain ≤1 ✅ (achieved)
-- Stage 2 — Add eccentrics: 2kg 3×8 4sec lower, pain ≤2 ✅ (current working weight)
-- Stage 3 — Progress eccentrics: 2.5kg 3×8, only if 2kg was pain ≤1 for 2+ consecutive sessions
-- Stage 4 — Progress to 3kg eccentrics: only if 2.5kg was pain ≤1 for 2+ sessions
-- Stage 5 — Add pronation/supination: only once eccentrics pain-free
-- NEVER increase load if elbow pain was >2 in previous session
-- If pain was 3+: drop to previous stage, isometrics only that day
-- Rowing pre-fatigue aggravates — do not row and eccentric same day
-- Always tape forearm. Cork ball 3 min soft tissue after.
+━━ ELBOW REHAB — MANDATORY IN EVERY SESSION ━━
+PROGRESSION PROTOCOL (read most recent note to determine current stage):
+- Stage 1 — Isometrics: 3kg 4×35sec ✅ completed
+- Stage 2 — Eccentrics: 2kg 3×8 4sec lower ✅ current working weight
+- Stage 3 — Progress to 2.5kg eccentrics: ONLY if most recent session pain ≤1 AND previous session also ≤2
+- Stage 4 — Progress to 3kg: ONLY if 2.5kg was ≤1 for 2 consecutive sessions
+- Stage 5 — Add pronation/supination: only once all eccentrics pain-free
+RULES:
+- The MOST RECENT session note is the current status — it overrides all older notes
+- If most recent pain was ≤1: consider progressing one stage
+- If most recent pain was 2: hold current load
+- If most recent pain was 3+: drop to isometrics only today, no eccentrics
+- Rowing pre-fatigues the tendon — never program eccentrics same day as rowing
+- Always tape forearm. Always finish with cork ball 3 min soft tissue.
+- If post-session note explicitly says "ready to increase" or "could progress" — DO progress the load
 
-RECENT ELBOW NOTES (use to determine current stage and whether to progress):
-${elbowNotes||'No recent elbow notes — use Stage 2 defaults.'}
+CURRENT ELBOW STATUS — base today's prescription on this:
+${elbowCurrentStatus}
+${elbowPrevStatus}
+
+ELBOW HISTORY (for trend context, oldest to newest):
+${elbowHistory||'No elbow history — use Stage 2 defaults: 2kg eccentrics 3×8.'}
 
 ━━ LOAD PROGRESSION — CRITICAL ━━
 Always check recent session notes for actual loads used. Prescribe the NEXT step from last actual load, not from baselines.
