@@ -58,10 +58,26 @@ const SUMMARY_KEY  = 'surf_bjj_summary_v1';
 const PROGRAM_KEY  = 'surf_bjj_program_v1';
 const APIKEY_KEY   = 'surf_bjj_apikey';
 const PLAN_KEY     = 'surf_bjj_plan_v1';
+const FEEDBACK_KEY = 'surf_bjj_feedback_v1';
+const HRV_KEY      = 'surf_bjj_hrv_v1';
 
 function savePlan(plan){
-  try{ localStorage.setItem(PLAN_KEY,JSON.stringify({date:todayKey(),plan,ticked:S.ticked,blockNotes:S.blockNotes,warmupTicked:S.warmupTicked,sessionDone:S.sessionDone,postSessionNote:S.postSessionNote,sessionAvgHR:S.sessionAvgHR,sessionAvgWatts:S.sessionAvgWatts,sessionPeakWatts:S.sessionPeakWatts,preWorkoutNote:S.preWorkoutNote,preWorkoutResponse:S.preWorkoutResponse})); }catch{}
+  try{ localStorage.setItem(PLAN_KEY,JSON.stringify({date:todayKey(),plan,ticked:S.ticked,blockNotes:S.blockNotes,warmupTicked:S.warmupTicked,sessionDone:S.sessionDone,postSessionNote:S.postSessionNote,sessionAvgHR:S.sessionAvgHR,sessionAvgWatts:S.sessionAvgWatts,sessionPeakWatts:S.sessionPeakWatts,preWorkoutNote:S.preWorkoutNote,preWorkoutResponse:S.preWorkoutResponse,customExercises:S.customExercises,extraSession:S.extraSession,condOverride:S.condOverride,condType:S.condType})); }catch{}
 }
+function saveFeedback(fb){
+  try{ localStorage.setItem(FEEDBACK_KEY,JSON.stringify({date:todayKey(),feedback:fb})); }catch{}
+}
+function loadFeedback(){
+  try{
+    const s=JSON.parse(localStorage.getItem(FEEDBACK_KEY)||'null');
+    if(!s||s.date!==todayKey()) return null;
+    return s.feedback;
+  }catch{ return null; }
+}
+function loadHRVSettings(){
+  try{ return JSON.parse(localStorage.getItem(HRV_KEY)||'{"min":30,"max":54,"greenMin":44,"amberMin":35}'); }catch{ return {min:30,max:54,greenMin:44,amberMin:35}; }
+}
+function saveHRVSettings(v){ try{ localStorage.setItem(HRV_KEY,JSON.stringify(v)); }catch{} }
 function loadPlan(){
   try{
     const s=JSON.parse(localStorage.getItem(PLAN_KEY)||'null');
@@ -229,6 +245,11 @@ const SUPPS = [
    timing:'Before bed — dissolve in water',
    color:'#94a3b8', group:'before-bed',
    why:'Separate from pre-training dose. 3g before bed consistently shown to reduce time to fall asleep and increase slow-wave restorative sleep — especially valuable for rotating shift workers. Slightly sweet taste, easy to take. Bulk Nutrients glycine powder.'},
+  {key:'collagen_bed', name:'Bedtime Collagen + Vit C (2nd dose)',
+   dose:'10g HCP + 200mg Vit C',
+   timing:'Before bed — supports overnight tissue repair',
+   color:'#22d3ee', group:'before-bed',
+   why:'Second collagen dose supports overnight tissue repair. Less critical than pre-training dose but useful on heavy training days or when elbow is irritated. Mix 10g Bulk Nutrients HCP with 200mg Vit C in warm water. Skip if not convenient — the pre-training dose is always the priority. Particularly useful in the final weeks before surgery to maximise tissue quality.'},
 ];
 
 // Group labels for display
@@ -361,6 +382,13 @@ let S = {
   plan:null,loading:false,error:null,
   ticked:{},blockNotes:{},warmupTicked:{},sessionDone:false,postSessionNote:'',
   sessionAvgHR:'', sessionAvgWatts:'', sessionPeakWatts:'',
+  condOverride:false, condType:'',
+  customExercises:[], // extra exercises added during/after session
+  extraSession:[], // second session exercise blocks
+  hrvSettings:{min:34,max:47,greenMin:45,amberMin:34},
+  showHRVSettings:false,
+  expandedLogEntry:null, // which log entry is expanded
+  showJournalFeedbackFor:null, journalFeedback:null, journalFeedbackLoading:false,
   preWorkoutNote:'',preWorkoutResponse:'',preWorkoutLoading:false,
   log:[],
   showAddModal:false,
@@ -402,23 +430,31 @@ S.journal   = loadJournal();
 S.summaries = loadSummaries();
 S.programs  = loadPrograms();
 S.apiKey    = loadApiKey();
+S.hrvSettings = loadHRVSettings();
 
 // Restore today's plan if browser was closed/refreshed mid-session
 const _savedPlan = loadPlan();
 if(_savedPlan){
-  S.plan            = _savedPlan.plan;
-  S.ticked          = _savedPlan.ticked          || {};
-  S.blockNotes      = _savedPlan.blockNotes       || {};
-  S.warmupTicked    = _savedPlan.warmupTicked     || {};
-  S.sessionDone     = _savedPlan.sessionDone      || false;
-  S.postSessionNote = _savedPlan.postSessionNote  || '';
-  S.sessionAvgHR    = _savedPlan.sessionAvgHR     || '';
-  S.sessionAvgWatts = _savedPlan.sessionAvgWatts  || '';
-  S.sessionPeakWatts= _savedPlan.sessionPeakWatts || '';
-  S.preWorkoutNote  = _savedPlan.preWorkoutNote   || '';
+  S.plan             = _savedPlan.plan;
+  S.ticked           = _savedPlan.ticked           || {};
+  S.blockNotes       = _savedPlan.blockNotes        || {};
+  S.warmupTicked     = _savedPlan.warmupTicked      || {};
+  S.sessionDone      = _savedPlan.sessionDone       || false;
+  S.postSessionNote  = _savedPlan.postSessionNote   || '';
+  S.sessionAvgHR     = _savedPlan.sessionAvgHR      || '';
+  S.sessionAvgWatts  = _savedPlan.sessionAvgWatts   || '';
+  S.sessionPeakWatts = _savedPlan.sessionPeakWatts  || '';
+  S.preWorkoutNote   = _savedPlan.preWorkoutNote    || '';
   S.preWorkoutResponse = _savedPlan.preWorkoutResponse || '';
-  S.screen          = 'plan'; // go straight to the plan screen
+  S.customExercises  = _savedPlan.customExercises   || [];
+  S.extraSession     = _savedPlan.extraSession      || [];
+  S.condOverride     = _savedPlan.condOverride      || false;
+  S.condType         = _savedPlan.condType          || '';
+  S.screen           = 'plan';
 }
+// Restore today's feedback
+const _savedFeedback = loadFeedback();
+if(_savedFeedback) S.feedback = _savedFeedback;
 
 function freshBJJForm(){
   return {date:todayKey(),type:'bjj',location:'',techniques:[{name:'',position:'Guard',keySteps:'',notes:''}],rounds:[{partner:'',duration:'',result:'Win',submission:'',notes:''}],wins:0,losses:0,sessionNotes:'',drillNext:''};
@@ -430,56 +466,67 @@ function freshSurfForm(){
 // ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 function sysPrompt(){
   const dl=daysLeft(),wl=weeksLeft();
+  const hrv=S.hrvSettings||{min:34,max:47,greenMin:45,amberMin:34};
   const recent=S.log.slice(-30).map(e=>{
     let line=`${e.date}: Sleep ${e.sleepStr||e.sleep+'h'} score:${e.sleepScore||'?'} | RHR ${e.rhr}bpm | HRV ${e.hrv}ms | E:${e.energy}/10 | Wt:${e.weight||'?'}kg | ${e.bodyBattery?'BB:'+e.bodyBattery+' |':''} Shift:${e.shift} | Gym:${e.gym} | ${e.session_title||'not logged'}`;
+    if(e.sessionAvgWatts) line+=` | Watts:${e.sessionAvgWatts}w HR:${e.sessionAvgHR||'?'}bpm`;
     if(e.postSessionNote) line+=` | Post: "${e.postSessionNote.slice(0,200)}"`;
     return line;
   }).join('\n')||'No history yet.';
-  const summaryBlock=S.summaries.length>0
-    ?`\nHISTORICAL SUMMARY (sessions older than recent 30):\n${S.summaries.map(s=>`${s.dateRange}: ${s.text}`).join('\n')}`:'';
+  const recentNotes=S.log.slice(-8).filter(e=>e.postSessionNote).map(e=>`${e.date}: ${e.postSessionNote.slice(0,300)}`).join('\n');
+  // Yesterday nutrition context
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yd=`${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+  let nutContext='';
+  try{
+    const allNut=JSON.parse(localStorage.getItem(NUT_KEY)||'{}');
+    const yNut=allNut[yd];
+    if(yNut){ const yP=Math.round((yNut.foods||[]).reduce((s,f)=>s+f.protein,0)); const yK=Math.round((yNut.foods||[]).reduce((s,f)=>s+f.calories,0)); nutContext=`\nYESTERDAY NUTRITION: ${yP}g protein / ${yK} kcal${yNut.dayNote?' — NOTE: "'+yNut.dayNote+'"':''}`; }
+  }catch{}
+  const summaryBlock=S.summaries.length>0?`\nHISTORICAL SUMMARY:\n${S.summaries.map(s=>`${s.dateRange}: ${s.text}`).join('\n')}`:'';
   const prog=activeProgram();
-  const programBlock=prog
-    ?`\nACTIVE PROGRAM CONTEXT (set ${prog.date}):\nTrigger: "${prog.trigger}"\n${prog.context}`:
-    '';
+  const programBlock=prog?`\nACTIVE PROGRAM CONTEXT (set ${prog.date}):\nTrigger: "${prog.trigger}"\n${prog.context}`:'';
   return `You are an elite S&C coach for a surf/BJJ athlete.
 PROFILE: Male, rotating shift worker. Surgery: RIGHT SHOULDER April 24 2026 — ${dl} days (~${wl}wks).
 Procedures: Right biceps tenodesis, labral repair, right shoulder stabilisation.
 Sports: Surf 2-4x/wk, BJJ 2-4x/wk — count as training load.
 Diet: Carnivore/animal-based, intermittent fasting most days. High protein priority.
 
-LEFT ELBOW — lateral epicondylalgia, moderate, improving week 3:
-- Isometrics: 3kg 4×35sec baseline, pain ≤1 consistently
-- Eccentrics: Attempted Mar 15 at 3kg — pain 4-5 end of set after rowing pre-fatigue. Next attempt: 2kg, more rest after isometrics, no prior elbow-loading cardio same session, reposition arm out to side
-- Rowing aggravates elbow — use bike/ski erg preference for conditioning days
-- Taping forearm close to elbow consistently effective — always recommend
-- Pronation/supination: reintroduce only once eccentrics pain-free
-- Daily rehab mandatory every session
+LEFT ELBOW — lateral epicondylalgia, improving:
+- Isometrics: 3kg 4×35sec, pain ≤1. Eccentrics: 2kg 3×8, pain ≤2 — DO NOT exceed without explicit progression
+- Rowing aggravates — use bike/ski erg. Tape forearm always. Daily rehab mandatory.
 
-RIGHT SHOULDER PREHAB: Discomfort at full extension. Limit ROM. Keep face pulls, pull-aparts, external rotation, serratus. No heavy overhead right side.
+RIGHT SHOULDER: Unstable, cannot contract right pec. Prioritise INCLINE press. Face pulls/pull-aparts/ext rotation mandatory. No heavy overhead.
 
-HRV BASELINE: 34-47ms personal range. Calibrate ALL readiness to this.
-- GREEN: HRV≥45, RHR≤50, Sleep≥7h, Score≥78, BB≥70, Energy≥7
-- AMBER: HRV 35-44 OR RHR 50-58 OR Sleep 6-7h OR Score 65-77 OR BB 40-69 OR Energy 5-6
-- RED: HRV<34 OR RHR>60 OR Sleep<6h OR Score<60 OR BB<40 OR Energy≤4
+HRV BASELINE (personal range — calibrate all readiness to this):
+- Personal range: ${hrv.min}–${hrv.max}ms
+- GREEN: HRV≥${hrv.greenMin}, RHR≤50, Sleep≥7h, Score≥78, BB≥70, Energy≥7
+- AMBER: HRV ${hrv.amberMin}–${hrv.greenMin-1} OR RHR 50-58 OR Sleep 6-7h OR Score 65-77 OR BB 40-69 OR Energy 5-6
+- RED: HRV<${hrv.amberMin} OR RHR>60 OR Sleep<6h OR Score<60 OR BB<40 OR Energy≤4
 
-STRENGTH BASELINES (as of Mar 16):
-- Back squat: 70kg×6 | Bulgarian split squat: 10kg DBs×8 | Glute bridge: 50kg×10
-- DB bench: 22.5kg×10 RPE 6-7 (progressed from 20kg Mar 16) — NOTE: right shoulder unstable, cannot contract right pec correctly, prioritise INCLINE press to develop upper chest
-- Pull-ups: 5-6 reps | Seated row: 20kg×10 (elbow pain 2 on pull) | Chest-supported row: 12.5kg
-- Landmine rotational press: 10kg 3×8 (brace cue — lower back tightness noted)
-- Echo bike Z2: 146 watts, 30-31km/h | Rowing: 2:17.6/500m (avoid elbow-heavy days)
-- Elbow rehab: isometrics 3kg 4×35sec pain ≤1 (ready to progress load/duration). Eccentrics 2kg 3×8 pain ≤2 (progressed from failed 3kg attempt — 2kg is current working weight)
+LOAD CARRYOVER — CRITICAL: Check recent session notes below for actual loads used. Always prescribe NEXT progression from what was last done, not the baseline figures.
 
-EQUIPMENT: HOME: power cage, DBs, plates, Echo Assault Bike, leg ext/curl. WORK: ski erg, C2 rower, assault bike, flat+incline benches, DBs.
+RECENT SESSION NOTES (extract actual loads from these):
+${recentNotes||'No recent notes yet.'}
 
-PERIODISATION: Wks 1-2 done. Wks 3-4 NOW: Accumulate 70-80%. Wks 5-6: Intensify 80-90%. Wk7+: Taper. Apr 17-24: mobility+easy only.
-${programBlock}${summaryBlock}
+BASELINE (use only if no recent note available for that exercise):
+Back squat: 70kg×6 | Bulgarian split squat: 10kg×8 | Glute bridge: 50kg×10
+DB bench (incline preferred): 22.5kg×10 | Pull-ups: 5-6 | Seated row: 20kg×10 | Chest-supported row: 12.5kg
+Landmine press: 10kg 3×8 | Echo bike Z2: 146w baseline
 
-RECENT LOG (last 30 sessions):
+EQUIPMENT: HOME: power cage, DBs, plates, Echo Assault Bike, leg ext/curl. WORK: ski erg, C2 rower, assault bike, benches, DBs.
+CONDITIONING (core daily — always prescribe unless RED or 3+ sessions in 3 days):
+HOME=Echo Assault Bike, WORK=Assault Bike or Ski Erg. Avoid rower on elbow days.
+GREEN/AMBER+strength: 15-20min Z2 after. Surf 45+min Z2: covered. BJJ: 10-15min light. Recovery: 20-25min. Missed yesterday: +5min.
+
+PERIODISATION: Wks 3-4 NOW: Accumulate 70-80%. Wks 5-6: Intensify 80-90%. Wk7+: Taper. Apr 17-24: mobility only.
+${programBlock}${summaryBlock}${nutContext}
+
+RECENT LOG (last 30):
 ${recent}
 
 JSON only, no markdown:
-{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics and post-session notes","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"title","session_type":"HOME_STRENGTH|HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"warmup as numbered steps e.g. 1. 5 min row HR 120-130. 2. 10 band pull-aparts. 3. 10 thoracic rotations","blocks":[{"title":"name","exercises":[{"name":"ex","sets":"3x8","load":"specific load from baselines","notes":"cue + arm mod"}]}],"elbow_block":{"title":"Daily Elbow Rehab — 8 min","exercises":[{"name":"ex","sets":"sets","load":"load","notes":"specific note for this week"}]},"conditioning":{"recommended":true,"description":"e.g. 20 min Echo bike or 15 min ski erg","duration_mins":20,"target_hr":"115-130 bpm","zone":"Zone 2","notes":"specific coaching note on conditioning today"},"cooldown":"cooldown","coach_note":"personalised insight referencing history and baselines","surf_bjj_note":"advice today","surgery_note":"note given ${dl} days to right shoulder surgery"}`;
+{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics and post-session notes","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"title","session_type":"HOME_STRENGTH|HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"warmup as numbered steps","blocks":[{"title":"name","exercises":[{"name":"ex","sets":"3x8","load":"SPECIFIC load progressed from recent notes","notes":"cue"}]}],"elbow_block":{"title":"Daily Elbow Rehab","exercises":[{"name":"ex","sets":"sets","load":"load","notes":"note"}]},"conditioning":{"recommended":true,"equipment":"Echo Assault Bike","description":"20 min Echo Assault Bike","duration_mins":20,"target_hr":"115-130 bpm","zone":"Zone 2","skip_reason":"only if recommended=false","notes":"coaching note"},"cooldown":"cooldown","coach_note":"personalised referencing actual loads from recent notes","surf_bjj_note":"advice today","surgery_note":"note given ${dl} days to surgery"}`
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
@@ -584,7 +631,7 @@ function mkCheckin(){
   mc.appendChild(mkSliderStepper(S.rhr,35,90,rC,v=>{S.rhr=v;render();},`${S.rhr} bpm`));
   mc.appendChild(d('div','margin-bottom:16px;'));
   mc.appendChild(secLbl('HRV'));
-  const hC=S.hrv>=45?'#22c55e':S.hrv>=34?'#f59e0b':'#ef4444';
+  const hC=S.hrv>=(S.hrvSettings?.greenMin||44)?'#22c55e':S.hrv>=(S.hrvSettings?.amberMin||35)?'#f59e0b':'#ef4444';
   mc.appendChild(mkSliderStepper(S.hrv,20,120,hC,v=>{S.hrv=v;render();},`${S.hrv} ms`));
   mc.appendChild(d('div','margin-bottom:16px;'));
   mc.appendChild(secLbl('BODY BATTERY  ·  STRESS  ·  RESP RATE'));
@@ -771,44 +818,125 @@ function mkPlan(){
   (p.blocks||[]).forEach((blk,bi)=>w.appendChild(mkBlock(blk,`b${bi}`,'#22d3ee',`BLOCK ${bi+1} · ${(blk.title||'').toUpperCase()}`,'#0b1120','#111827',false,`block_${bi}`)));
   if(p.elbow_block) w.appendChild(mkBlock(p.elbow_block,'elbow','#4ade80','🩹 DAILY ELBOW REHAB','#060f06','#14532d',true,'elbow_rehab'));
 
-  // ── CONDITIONING BLOCK ──
-  if(p.conditioning){
-    const cond=p.conditioning;
-    const condCard=d('div',`background:${cond.recommended?'#0a0f1a':'#0b1120'};border:1px solid ${cond.recommended?'#f59e0b40':'#1f2937'};border-radius:12px;margin-bottom:10px;overflow:hidden;`);
-    const condHdr=d('div',`padding:11px 16px;border-bottom:1px solid ${cond.recommended?'#f59e0b20':'#0d1117'};display:flex;justify-content:space-between;align-items:center;background:${cond.recommended?'#f59e0b08':'transparent'};`);
-    condHdr.innerHTML=`<span style="font-size:10px;font-weight:700;color:${cond.recommended?'#f59e0b':'#475569'};letter-spacing:.15em;">🚴 CONDITIONING${cond.recommended?'':' — OPTIONAL TODAY'}</span>${cond.zone?`<span style="font-size:9px;color:#475569;">${cond.zone}</span>`:''}`;
-    condCard.appendChild(condHdr);
+  // ── CONDITIONING BLOCK — always shown ──
+  const cond=p.conditioning||{recommended:false,skip_reason:'Not prescribed today'};
+  const showCondMetrics=cond.recommended||S.condOverride;
+  const condCard=d('div',`background:${showCondMetrics?'#0a0f1a':'#0b1120'};border:1px solid ${showCondMetrics?'#f59e0b40':'#1f2937'};border-radius:12px;margin-bottom:10px;overflow:hidden;`);
+
+  // Header
+  const condHdr=d('div',`padding:11px 16px;border-bottom:1px solid ${showCondMetrics?'#f59e0b20':'#0d1117'};display:flex;justify-content:space-between;align-items:center;background:${showCondMetrics?'#f59e0b08':'transparent'};`);
+  condHdr.innerHTML=`<span style="font-size:10px;font-weight:700;color:${showCondMetrics?'#f59e0b':'#475569'};letter-spacing:.15em;">🚴 CONDITIONING</span>${cond.zone&&showCondMetrics?`<span style="font-size:9px;color:#475569;">${cond.zone}</span>`:''}`;
+  condCard.appendChild(condHdr);
+
+  if(showCondMetrics){
+    // Prescribed or overridden — show full prescription
     const condBody=d('div','padding:12px 16px;');
-    condBody.innerHTML=`<div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:6px;">${cond.description||''}</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-        ${cond.duration_mins?`<span style="font-size:11px;color:#f59e0b;background:#f59e0b14;padding:2px 8px;border-radius:4px;">⏱ ${cond.duration_mins} min</span>`:''}
-        ${cond.target_hr?`<span style="font-size:11px;color:#ef4444;background:#ef444414;padding:2px 8px;border-radius:4px;">❤ ${cond.target_hr}</span>`:''}
-      </div>
-      ${cond.notes?`<div style="font-size:11px;color:#475569;line-height:1.5;">${cond.notes}</div>`:''}`;
+
+    // Equipment + description
+    const equipRow=d('div','display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;');
+    if(cond.equipment){
+      const equipChip=d('span','font-size:11px;color:#22d3ee;background:#22d3ee14;padding:2px 8px;border-radius:4px;font-weight:700;');
+      equipChip.textContent=cond.equipment; equipRow.appendChild(equipChip);
+    }
+    const descTxt=d('div','font-size:14px;font-weight:700;color:#f1f5f9;'); descTxt.textContent=cond.description||'Conditioning session'; equipRow.appendChild(descTxt);
+    condBody.appendChild(equipRow);
+
+    // Duration + HR chips
+    const chips=d('div','display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;');
+    if(cond.duration_mins){ const c=d('span','font-size:11px;color:#f59e0b;background:#f59e0b14;padding:3px 10px;border-radius:4px;'); c.textContent=`⏱ ${cond.duration_mins} min`; chips.appendChild(c); }
+    if(cond.target_hr){     const c=d('span','font-size:11px;color:#ef4444;background:#ef444414;padding:3px 10px;border-radius:4px;'); c.textContent=`❤ ${cond.target_hr}`; chips.appendChild(c); }
+    if(cond.zone){          const c=d('span','font-size:11px;color:#94a3b8;background:#1e293b;padding:3px 10px;border-radius:4px;'); c.textContent=cond.zone; chips.appendChild(c); }
+    condBody.appendChild(chips);
+
+    // Override note
+    if(S.condOverride&&!cond.recommended){
+      const ovNote=d('div','background:#f59e0b12;border:1px solid #f59e0b30;border-radius:6px;padding:8px 10px;margin-bottom:8px;');
+      ovNote.innerHTML=`<div style="font-size:11px;color:#f59e0b;line-height:1.5;">Prescribed skip reason: ${cond.skip_reason||''}. Logging manually.</div>`;
+      condBody.appendChild(ovNote);
+
+      // Manual type input
+      const typeRow=d('div','display:flex;gap:8px;align-items:center;margin-bottom:8px;');
+      const typeLabel=d('span','font-size:11px;color:#475569;flex-shrink:0;'); typeLabel.textContent='Equipment:';
+      const typeInp=document.createElement('input'); typeInp.type='text'; typeInp.placeholder='e.g. Echo Bike, Ski Erg, Run...';
+      typeInp.value=S.condType||''; typeInp.style.cssText='flex:1;background:#090e1a;border:1px solid #1f2937;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;';
+      typeInp.addEventListener('click',e2=>e2.stopPropagation());
+      typeInp.addEventListener('input',e2=>{e2.stopPropagation();S.condType=e2.target.value;});
+      typeRow.appendChild(typeLabel); typeRow.appendChild(typeInp); condBody.appendChild(typeRow);
+    }
+
+    if(cond.notes){ const n=d('div','font-size:11px;color:#475569;line-height:1.5;margin-bottom:4px;'); n.textContent=cond.notes; condBody.appendChild(n); }
     condCard.appendChild(condBody);
-    // Metrics input row for conditioning
-    const hrRow=d('div','padding:10px 16px;border-top:1px solid #0d1117;background:#090e1a;display:flex;flex-wrap:wrap;gap:12px;align-items:center;');
-    hrRow.innerHTML=`<span style="font-size:10px;color:#475569;letter-spacing:.1em;font-weight:700;width:100%;margin-bottom:4px;">COMPLETED METRICS</span>`;
+
+    // Metrics inputs
+    const hrRow=d('div','padding:10px 16px;border-top:1px solid #0d1117;background:#090e1a;');
+    const mLabel=d('div','font-size:9px;color:#475569;letter-spacing:.1em;font-weight:700;margin-bottom:8px;'); mLabel.textContent='COMPLETED METRICS';
+    hrRow.appendChild(mLabel);
+    const mGrid=d('div','display:flex;gap:12px;flex-wrap:wrap;');
     [{label:'Avg HR',key:'sessionAvgHR',unit:'bpm',color:'#ef4444'},{label:'Avg Watts',key:'sessionAvgWatts',unit:'w',color:'#f59e0b'},{label:'Peak Watts',key:'sessionPeakWatts',unit:'w',color:'#f97316'}].forEach(f=>{
       const col=d('div','display:flex;flex-direction:column;align-items:center;gap:3px;');
       const lbl=d('div','font-size:9px;color:#475569;'); lbl.textContent=f.label;
       const inp=document.createElement('input'); inp.type='number'; inp.placeholder='—'; inp.value=S[f.key]||''; inp.className='num-inp';
       inp.style.cssText=`color:${f.color};border-color:${f.color}40;width:72px;font-size:15px;`;
       inp.addEventListener('click',e2=>e2.stopPropagation());
-      inp.addEventListener('input',e2=>{e2.stopPropagation();S[f.key]=e2.target.value;S.log=S.log.map(l=>l.date===todayKey()?{...l,[f.key]:e2.target.value}:l);saveLog();});
+      inp.addEventListener('input',e2=>{e2.stopPropagation();S[f.key]=e2.target.value;S.log=S.log.map(l=>l.date===todayKey()?{...l,[f.key]:e2.target.value}:l);saveLog();if(S.plan)savePlan(S.plan);});
       const unit=d('div','font-size:9px;color:#374151;'); unit.textContent=f.unit;
-      col.appendChild(lbl); col.appendChild(inp); col.appendChild(unit);
-      hrRow.appendChild(col);
+      col.appendChild(lbl); col.appendChild(inp); col.appendChild(unit); mGrid.appendChild(col);
     });
-    condCard.appendChild(hrRow);
-    w.appendChild(condCard);
+    hrRow.appendChild(mGrid); condCard.appendChild(hrRow);
+
+  } else {
+    // Not recommended — show reason and override option
+    const skipBody=d('div','padding:12px 16px;');
+    skipBody.innerHTML=`<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:10px;">⏭ Skipped today — ${cond.skip_reason||cond.notes||'not prescribed'}</div>`;
+    const overrideBtn=d('button','width:100%;background:#0a0f1a;border:1px solid #f59e0b40;border-radius:8px;padding:10px;color:#f59e0b;font-size:12px;font-weight:700;');
+    overrideBtn.textContent='I want to do conditioning anyway — log it';
+    overrideBtn.onclick=()=>{S.condOverride=true;if(S.plan)savePlan(S.plan);render();};
+    skipBody.appendChild(overrideBtn); condCard.appendChild(skipBody);
   }
+
+  w.appendChild(condCard);
 
   if(p.cooldown){
     const cd=d('div','background:#0b1120;border-left:3px solid #374151;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:14px;');
     cd.innerHTML=`<div style="font-size:9px;color:#374151;letter-spacing:.2em;font-weight:700;margin-bottom:4px;">COOL-DOWN</div><p style="font-size:12px;color:#4b5563;margin:0;line-height:1.5;">${p.cooldown}</p>`;
     w.appendChild(cd);
   }
+
+  // ── CUSTOM EXERCISES (additional work — always visible) ──
+  const cxCard=d('div','background:#0b1120;border:1px solid #1f2937;border-radius:12px;padding:14px 16px;margin-bottom:10px;');
+  const cxHdr=d('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
+  cxHdr.innerHTML=`<div><div style="font-size:10px;color:#22d3ee;letter-spacing:.2em;font-weight:700;">ADDITIONAL WORK / EXTRA REHAB</div><div style="font-size:10px;color:#374151;margin-top:2px;">Add anything extra — second session, extra sets, rehab done later</div></div>`;
+  const addCxBtn=d('button','background:#22d3ee18;border:1px solid #22d3ee40;border-radius:8px;padding:6px 12px;color:#22d3ee;font-size:11px;font-weight:700;flex-shrink:0;');
+  addCxBtn.textContent='+ Add'; addCxBtn.onclick=()=>{ S.customExercises=[...S.customExercises,{name:'',sets:'',load:'',notes:''}]; if(S.plan)savePlan(S.plan); render(); };
+  cxHdr.appendChild(addCxBtn); cxCard.appendChild(cxHdr);
+  if(S.customExercises.length===0){
+    const cxEmpty=d('div','font-size:11px;color:#374151;padding:4px 0;'); cxEmpty.textContent='Tap + Add for extra exercises, second rehab session, or anything done later in the day.'; cxCard.appendChild(cxEmpty);
+  }
+  S.customExercises.forEach((ex,i)=>{
+    const cxRow=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px;margin-bottom:6px;position:relative;');
+    // Name row
+    const nr=d('div','display:flex;gap:6px;margin-bottom:6px;');
+    const ni=document.createElement('input'); ni.type='text'; ni.placeholder='Exercise name...'; ni.value=ex.name||'';
+    ni.style.cssText='flex:1;background:#070b12;border:1px solid #1f2937;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:13px;font-weight:700;';
+    ni.addEventListener('click',e2=>e2.stopPropagation()); ni.addEventListener('input',e2=>{e2.stopPropagation();ex.name=e2.target.value;if(S.plan)savePlan(S.plan);});
+    const delCx=d('button','background:transparent;border:none;color:#374151;font-size:16px;padding:4px 6px;flex-shrink:0;');
+    delCx.textContent='✕'; delCx.onclick=()=>{ S.customExercises.splice(i,1); if(S.plan)savePlan(S.plan); render(); };
+    nr.appendChild(ni); nr.appendChild(delCx); cxRow.appendChild(nr);
+    // Sets/Load/Notes row
+    const sr=d('div','display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;');
+    [{key:'sets',ph:'Sets/reps e.g. 3×8'},{key:'load',ph:'Load e.g. 2kg / band / BW'}].forEach(f=>{
+      const inp=document.createElement('input'); inp.type='text'; inp.placeholder=f.ph; inp.value=ex[f.key]||'';
+      inp.style.cssText='width:100%;background:#070b12;border:1px solid #1f2937;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;';
+      inp.addEventListener('click',e2=>e2.stopPropagation()); inp.addEventListener('input',e2=>{e2.stopPropagation();ex[f.key]=e2.target.value;if(S.plan)savePlan(S.plan);});
+      sr.appendChild(inp);
+    });
+    cxRow.appendChild(sr);
+    const noteInp=document.createElement('input'); noteInp.type='text'; noteInp.placeholder='Notes — pain level, how it felt...'; noteInp.value=ex.notes||'';
+    noteInp.style.cssText='width:100%;background:#070b12;border:1px solid #1f2937;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:11px;';
+    noteInp.addEventListener('click',e2=>e2.stopPropagation()); noteInp.addEventListener('input',e2=>{e2.stopPropagation();ex.notes=e2.target.value;if(S.plan)savePlan(S.plan);});
+    cxRow.appendChild(noteInp); cxCard.appendChild(cxRow);
+  });
+  w.appendChild(cxCard);
 
   // Post-session notes
   const psnCard=d('div','background:#0d1117;border:1px solid #7c3aed40;border-radius:12px;padding:16px;margin-bottom:14px;');
@@ -823,20 +951,21 @@ function mkPlan(){
   cb.textContent=S.sessionDone?'✓  Session logged':'Mark session complete';
   if(!S.sessionDone) cb.onclick=markDone; w.appendChild(cb);
 
-  // Edit session button
+  // Post-completion buttons
   if(S.sessionDone){
-    const editRow=d('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;');
-    const editBtn=d('button','background:#0b1120;border:1px solid #334155;border-radius:10px;padding:12px;color:#94a3b8;font-size:12px;font-weight:700;');
+    const editBtn=d('button','width:100%;background:#0b1120;border:1px solid #334155;border-radius:10px;padding:12px;color:#94a3b8;font-size:12px;font-weight:700;margin-bottom:8px;');
     editBtn.innerHTML='✎  Edit / Add to Session';
-    editBtn.onclick=()=>{ S.sessionDone=false; S.feedback=null; render(); };
-    editRow.appendChild(editBtn); w.appendChild(editRow);
+    editBtn.onclick=()=>{ S.sessionDone=false; render(); };
+    w.appendChild(editBtn);
+
     const fbBtn=d('button',`width:100%;background:${S.feedbackLoading?'#090e1a':'#0d1117'};border:1px solid #7c3aed60;border-radius:12px;padding:15px;color:${S.feedbackLoading?'#374151':'#a78bfa'};font-size:14px;font-weight:700;margin-bottom:8px;`);
     fbBtn.textContent=S.feedbackLoading?'⏳  Analysing session...':'📊  Session Feedback & Next Session Preview';
     if(!S.feedbackLoading) fbBtn.onclick=genFeedback;
     w.appendChild(fbBtn);
+
     if(S.feedback){
       const fbPreview=d('div','background:#0d1117;border:1px solid #7c3aed40;border-radius:10px;padding:12px 16px;margin-bottom:8px;cursor:pointer;');
-      fbPreview.innerHTML=`<div style="font-size:9px;color:#a78bfa;letter-spacing:.2em;font-weight:700;margin-bottom:5px;">FEEDBACK READY — tap to view</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${S.feedback.headline||''}</div>`;
+      fbPreview.innerHTML=`<div style="font-size:9px;color:#a78bfa;letter-spacing:.2em;font-weight:700;margin-bottom:5px;">FEEDBACK — tap to view</div><div style="font-size:12px;color:#94a3b8;line-height:1.5;">${S.feedback.headline||''}</div>`;
       fbPreview.onclick=()=>{S.showFeedbackModal=true;render();};
       w.appendChild(fbPreview);
     }
@@ -938,23 +1067,41 @@ function mkNutrition(){
   w.appendChild(fc);
 
   // DAILY PROGRESS
-  const dc=mkCard('#22d3ee','DAILY PROTEIN TARGET');
-  dc.innerHTML+=``;
-  const pRow=d('div','margin-bottom:14px;');
-  pRow.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${totalP}g protein</span><span style="font-size:12px;color:${pPct>=100?'#22c55e':'#94a3b8'};">${pPct>=100?'✓ TARGET MET':`${remaining}g to go`}</span></div><div style="height:8px;background:#1f2937;border-radius:4px;margin-bottom:4px;"><div style="height:100%;width:${pPct}%;background:${pPct>=100?'#22c55e':'#22d3ee'};border-radius:4px;transition:width .3s;"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:#475569;"><span>0g</span><span>Target: ${ptarget}g</span></div>`;
+  // Calorie target — carnivore maintenance ≈ bodyweight(kg) × 27-30 kcal
+  const wt=parseFloat([...S.log].reverse().find(e=>e.weight)?.weight||'88.7');
+  const maintainLow=Math.round(wt*27);
+  const maintainHigh=Math.round(wt*30);
+  const deficitTarget=Math.round(wt*24); // mild deficit for body recomp pre-surgery
+  const kPct=Math.min(100,Math.round(totalK/maintainLow*100));
+  const kStatus=totalK>=maintainLow?totalK>=maintainHigh?'above maintenance':'at maintenance':totalK>=deficitTarget?'mild deficit':'well below maintenance';
+  const kCol=totalK>=maintainLow?totalK>=maintainHigh?'#f97316':'#22c55e':totalK>=deficitTarget?'#f59e0b':'#94a3b8';
+
+  const dc=mkCard('#22d3ee','DAILY TARGETS');
+  // Protein row
+  const pRow=d('div','margin-bottom:12px;');
+  pRow.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;font-weight:700;color:#f1f5f9;">${totalP}g <span style="color:#94a3b8;font-weight:400;">protein</span></span><span style="font-size:12px;color:${pPct>=100?'#22c55e':'#94a3b8'};">${pPct>=100?'✓ TARGET MET':`${remaining}g to go`}</span></div><div style="height:6px;background:#1f2937;border-radius:3px;margin-bottom:3px;"><div style="height:100%;width:${pPct}%;background:${pPct>=100?'#22c55e':'#22d3ee'};border-radius:3px;transition:width .3s;"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:#374151;"><span>0g</span><span>Target: ${ptarget}g (2g/kg)</span></div>`;
   dc.appendChild(pRow);
-  const kRow=d('div','');
-  kRow.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:#94a3b8;">${totalK} kcal logged</span><span style="font-size:10px;color:#475569;">Carnivore — protein is primary metric</span></div>`;
+  // Calorie row
+  const kRow=d('div','margin-bottom:10px;');
+  kRow.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;font-weight:700;color:#f1f5f9;">${totalK} <span style="color:#94a3b8;font-weight:400;">kcal</span></span><span style="font-size:11px;color:${kCol};">${kStatus}</span></div><div style="height:6px;background:#1f2937;border-radius:3px;margin-bottom:3px;"><div style="height:100%;width:${Math.min(100,kPct)}%;background:${kCol};border-radius:3px;transition:width .3s;"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:#374151;"><span>Deficit: ~${deficitTarget}</span><span>Maintain: ${maintainLow}–${maintainHigh}</span></div>`;
   dc.appendChild(kRow);
+  // Range legend
+  const legend=d('div','display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;');
+  [{label:'Pre-surgery recomp',range:`${deficitTarget}–${maintainLow}`,col:'#f59e0b'},{label:'Maintenance',range:`${maintainLow}–${maintainHigh}`,col:'#22c55e'},{label:'Surplus',range:`${maintainHigh}+`,col:'#f97316'}].forEach(t=>{
+    const chip=d('div','font-size:9px;display:flex;align-items:center;gap:4px;');
+    chip.innerHTML=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${t.col};"></span><span style="color:#475569;">${t.label}: ${t.range} kcal</span>`;
+    legend.appendChild(chip);
+  });
+  dc.appendChild(legend);
   // Protein suggestion if remaining
   if(remaining>0&&FOODS.length>0){
-    const sugg=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-top:10px;');
-    sugg.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.15em;font-weight:700;margin-bottom:6px;">TO HIT TARGET — QUICK CALC</div>`;
-    [{name:'Rump Steak',p:26,k:175},{name:'Ground Beef 80/20',p:26,k:254},{name:'Chicken Breast',p:31,k:165},{name:'Eggs (×1 = 50g)',p:6.5,k:78}].forEach(f=>{
+    const sugg=d('div','background:#090e1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-top:6px;');
+    sugg.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.15em;font-weight:700;margin-bottom:6px;">QUICK CALC TO HIT PROTEIN</div>`;
+    [{name:'Rump Steak',p:26,k:175},{name:'Ground Beef 80/20',p:26,k:254},{name:'Chicken Breast',p:31,k:165},{name:'Beef Jerky homemade',p:53,k:270}].forEach(f=>{
       const g=Math.round(remaining/f.p*100);
-      const row=d('div','display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;padding:3px 0;');
-      row.innerHTML=`<span>${f.name}</span><span style="color:#22d3ee;font-weight:700;">${g}g = ${remaining}g protein</span>`;
-      sugg.appendChild(row);
+      const row2=d('div','display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;padding:3px 0;');
+      row2.innerHTML=`<span>${f.name}</span><span style="color:#22d3ee;font-weight:700;">${g}g = ${remaining}g P</span>`;
+      sugg.appendChild(row2);
     });
     dc.appendChild(sugg);
   }
@@ -1272,19 +1419,59 @@ function mkHistory(){
   const li=d('div','display:grid;gap:8px;');
   sorted.slice(0,40).forEach(e=>{
     const rc=RCOL[e.readiness]||'#475569';
-    const row=d('div','background:#0b1120;border:1px solid #111827;border-radius:10px;padding:14px 16px;position:relative;');
-    const chips=[e.sleepStr||e.sleep+'h',`Score:${e.sleepScore||'?'}`,`RHR:${e.rhr}`,`HRV:${e.hrv}ms`,`E:${e.energy}/10`,e.bodyBattery?`BB:${e.bodyBattery}`:'',e.weight?`${e.weight}kg`:'',e.shift,e.gym].filter(Boolean);
+    const isExp=S.expandedLogEntry===e.date;
+    const chips=[e.sleepStr||e.sleep+'h',`Score:${e.sleepScore||'?'}`,`RHR:${e.rhr}`,`HRV:${e.hrv}ms`,`E:${e.energy}/10`,e.bodyBattery?`BB:${e.bodyBattery}`:'',e.weight?`${e.weight}kg`:'',e.sessionAvgWatts?`${e.sessionAvgWatts}w`:'',e.sessionAvgHR?`HR:${e.sessionAvgHR}`:'',e.shift,e.gym].filter(Boolean);
+    const row=d('div',`background:#0b1120;border:1px solid ${isExp?'#334155':'#111827'};border-radius:10px;padding:14px 16px;position:relative;cursor:pointer;`);
     row.innerHTML=`
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px;padding-right:24px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px;padding-right:48px;">
         <div style="display:flex;gap:8px;align-items:center;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${rc};box-shadow:0 0 5px ${rc};flex-shrink:0;margin-top:1px;"></span><span style="font-size:13px;font-weight:700;color:#f1f5f9;">${e.session_title||'Session'}</span></div>
         <span style="font-size:10px;color:#374151;font-family:monospace;">${e.date}</span>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:${e.postSessionNote||e.notes?'6px':'0'};">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
         ${chips.map(m=>`<span style="font-size:10px;color:#4b5563;background:#0d1117;padding:2px 7px;border-radius:4px;">${m}</span>`).join('')}
       </div>
-      ${e.notes?`<div style="font-size:11px;color:#374151;margin-bottom:4px;line-height:1.4;font-style:italic;">AM: "${e.notes}"</div>`:''}
-      ${e.postSessionNote?`<div style="font-size:11px;color:#7c3aed90;line-height:1.4;font-style:italic;margin-top:4px;">Post: "${e.postSessionNote.slice(0,200)}${e.postSessionNote.length>200?'...':''}"</div>`:''}
-      ${e.completed?`<div style="font-size:11px;color:#22c55e;margin-top:5px;">✓ ${e.completed}</div>`:''}`;
+      ${e.completed?`<div style="font-size:11px;color:#22c55e;margin-bottom:2px;">✓ ${e.completed}</div>`:''}
+      <div style="font-size:10px;color:#334155;margin-top:2px;">${isExp?'▲ tap to collapse':'▼ tap to expand'}</div>`;
+
+    // Expanded detail
+    if(isExp){
+      const expDiv=d('div','margin-top:10px;padding-top:10px;border-top:1px solid #1f2937;');
+      if(e.notes) expDiv.innerHTML+=`<div style="font-size:11px;color:#475569;margin-bottom:8px;font-style:italic;">Morning: "${e.notes}"</div>`;
+      if(e.postSessionNote){
+        const pnDiv=d('div','background:#090e1a;border-radius:8px;padding:10px;margin-bottom:8px;');
+        pnDiv.innerHTML=`<div style="font-size:9px;color:#7c3aed;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">SESSION NOTES</div><div style="font-size:12px;color:#94a3b8;line-height:1.6;white-space:pre-wrap;">${e.postSessionNote}</div>`;
+        expDiv.appendChild(pnDiv);
+      }
+      // Block notes
+      if(e.blockNotes&&Object.keys(e.blockNotes).some(k=>e.blockNotes[k])){
+        const bnDiv=d('div','background:#090e1a;border-radius:8px;padding:10px;margin-bottom:8px;');
+        bnDiv.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.15em;font-weight:700;margin-bottom:4px;">BLOCK NOTES</div>`;
+        Object.entries(e.blockNotes).forEach(([k,v])=>{ if(v){ const r=d('div','font-size:11px;color:#94a3b8;margin-bottom:3px;'); r.innerHTML=`<span style="color:#374151;">${k}:</span> ${v}`; bnDiv.appendChild(r); }});
+        expDiv.appendChild(bnDiv);
+      }
+      // Custom exercises
+      if(e.customExercises&&e.customExercises.length>0){
+        const cxDiv=d('div','background:#090e1a;border-radius:8px;padding:10px;margin-bottom:8px;');
+        cxDiv.innerHTML=`<div style="font-size:9px;color:#22d3ee;letter-spacing:.15em;font-weight:700;margin-bottom:6px;">ADDITIONAL WORK</div>`;
+        e.customExercises.forEach(ex=>{
+          const exRow=d('div','font-size:12px;color:#94a3b8;padding:3px 0;border-bottom:1px solid #0d1117;');
+          exRow.innerHTML=`<span style="color:#f1f5f9;font-weight:700;">${ex.name||'Exercise'}</span>${ex.sets?` · ${ex.sets}`:''}${ex.load?` · <span style="color:#f59e0b;">${ex.load}</span>`:''}${ex.notes?`<br><span style="font-size:11px;color:#475569;">${ex.notes}</span>`:''}`;
+          cxDiv.appendChild(exRow);
+        });
+        expDiv.appendChild(cxDiv);
+      }
+      // Conditioning metrics
+      if(e.sessionAvgHR||e.sessionAvgWatts){
+        const cRow=d('div','display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;');
+        if(e.sessionAvgHR){ const c=d('span','font-size:11px;color:#ef4444;background:#ef444414;padding:3px 8px;border-radius:4px;'); c.textContent=`❤ ${e.sessionAvgHR} bpm avg`; cRow.appendChild(c); }
+        if(e.sessionAvgWatts){ const c=d('span','font-size:11px;color:#f59e0b;background:#f59e0b14;padding:3px 8px;border-radius:4px;'); c.textContent=`⚡ ${e.sessionAvgWatts}w avg`; cRow.appendChild(c); }
+        if(e.sessionPeakWatts){ const c=d('span','font-size:11px;color:#f97316;background:#f9731614;padding:3px 8px;border-radius:4px;'); c.textContent=`⚡ ${e.sessionPeakWatts}w peak`; cRow.appendChild(c); }
+        expDiv.appendChild(cRow);
+      }
+      row.appendChild(expDiv);
+    }
+
+    row.onclick=()=>{ S.expandedLogEntry=isExp?null:e.date; render(); };
     const del=d('button','position:absolute;top:12px;right:12px;background:transparent;border:none;color:#374151;font-size:16px;padding:2px 6px;');
     del.textContent='✕'; del.onclick=ev=>{ev.stopPropagation();if(confirm('Delete?')){S.log=S.log.filter(x=>x!==e);saveLog();render();}};
     row.appendChild(del); li.appendChild(row);
@@ -1526,10 +1713,23 @@ function mkJournalView(){
   }
 
   // Edit button
-  const eb=d('button','width:100%;background:transparent;border:1px solid #1f2937;border-radius:10px;padding:12px;color:#94a3b8;font-size:13px;font-weight:700;');
+  const eb=d('button','width:100%;background:transparent;border:1px solid #1f2937;border-radius:10px;padding:12px;color:#94a3b8;font-size:13px;font-weight:700;margin-bottom:8px;');
   eb.textContent='Edit Entry';
   eb.onclick=()=>{S.jForm=JSON.parse(JSON.stringify(e));S.journalViewEntry=null;S.showJournalModal=true;render();};
   m.appendChild(eb);
+
+  // Journal feedback button
+  const jfBtn=d('button',`width:100%;background:${S.journalFeedbackLoading?'#090e1a':'#0b1120'};border:1px solid ${isBJJ?'#ef444440':'#0ea5e940'};border-radius:10px;padding:12px;color:${S.journalFeedbackLoading?'#374151':isBJJ?'#ef4444':'#0ea5e9'};font-size:13px;font-weight:700;margin-bottom:${S.journalFeedback&&S.showJournalFeedbackFor===e.date?'10px':'0'};`);
+  jfBtn.textContent=S.journalFeedbackLoading&&S.showJournalFeedbackFor===e.date?'⏳  Analysing...':'💬 Get Coach Feedback';
+  jfBtn.onclick=()=>genJournalFeedback(e);
+  m.appendChild(jfBtn);
+
+  if(S.journalFeedback&&S.showJournalFeedbackFor===e.date){
+    const jfCard=d('div','background:#090e1a;border-left:3px solid #a78bfa;border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:8px;');
+    jfCard.innerHTML=`<div style="font-size:9px;color:#a78bfa;letter-spacing:.2em;font-weight:700;margin-bottom:6px;">COACH FEEDBACK</div><div style="font-size:12px;color:#94a3b8;line-height:1.6;white-space:pre-wrap;">${S.journalFeedback}</div>`;
+    m.appendChild(jfCard);
+  }
+
   bg.appendChild(m); return bg;
 }
 
@@ -1742,7 +1942,7 @@ function mkJournalModal(){
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function genPlan(){
-  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.warmupTicked={}; S.sessionDone=false; S.postSessionNote=''; S.sessionAvgHR=''; S.sessionAvgWatts=''; S.sessionPeakWatts=''; S.preWorkoutNote=''; S.preWorkoutResponse=''; S.feedback=null; S.nutFeedback=null;
+  S.loading=true; S.error=null; S.plan=null; S.ticked={}; S.blockNotes={}; S.warmupTicked={}; S.sessionDone=false; S.postSessionNote=''; S.sessionAvgHR=''; S.sessionAvgWatts=''; S.sessionPeakWatts=''; S.condOverride=false; S.preWorkoutNote=''; S.preWorkoutResponse=''; S.feedback=null; S.nutFeedback=null;
   clearPlan(); // clear any saved plan before generating new one
   render();
   const sd=sleepDec(S.sleepH,S.sleepM),ss=sleepStr(S.sleepH,S.sleepM),gb=garminBand(S.sleepScore),shift=SHIFTS.find(x=>x.label===S.shift);
@@ -1772,7 +1972,7 @@ Generate today's optimal training plan.`;
 }
 
 function markDone(){
-  S.sessionDone=true; S.feedback=null;
+  S.sessionDone=true;
   S.log=S.log.map(e=>e.date===todayKey()?{
     ...e,
     completed:S.plan?.session_title||'Done',
@@ -1781,22 +1981,29 @@ function markDone(){
     sessionAvgHR:S.sessionAvgHR||e.sessionAvgHR||'',
     sessionAvgWatts:S.sessionAvgWatts||e.sessionAvgWatts||'',
     sessionPeakWatts:S.sessionPeakWatts||e.sessionPeakWatts||'',
+    customExercises:[...(e.customExercises||[]),...(S.customExercises||[])],
   }:e);
   saveLog();
-  savePlan(S.plan); // keep plan visible but with sessionDone=true
+  savePlan(S.plan);
   render();
 }
 
 async function askCoach(){
   if(!S.preWorkoutNote?.trim()) return;
   S.preWorkoutLoading=true; render();
-  const sys=`You are an elite S&C coach. An athlete is about to start their training session and has a quick question or request about today's plan. Answer concisely and practically — 2-4 sentences max. If they need an equipment alternative, give one specific substitution with sets/reps. Left elbow lateral epicondylalgia — no pronated gripping. Right shoulder pre-surgery — no heavy overhead.`;
-  const msg=`Today's plan: ${JSON.stringify(S.plan?.blocks?.map(b=>({title:b.title,exercises:b.exercises?.map(e=>e.name)})))}\n\nAthlete question: "${S.preWorkoutNote}"`;
+  const recentLoads=S.log.slice(-6).filter(e=>e.postSessionNote).map(e=>`${e.date}: ${e.postSessionNote.slice(0,200)}`).join('\n');
+  const sys=`You are an elite S&C coach. An athlete has a quick question about today's plan. Answer concisely — 2-4 sentences max. Give specific loads/reps based on their recent session notes below. Left elbow lateral epicondylalgia — avoid heavy pronated gripping, rowing aggravates. Right shoulder pre-surgery — no heavy overhead, incline preferred. If suggesting an alternative exercise, give exact sets/reps/load.`;
+  const msg=`Today's prescribed plan: ${JSON.stringify(S.plan?.blocks?.map(b=>({title:b.title,exercises:b.exercises?.map(e=>({name:e.name,sets:e.sets,load:e.load}))}))||[])}
+
+Recent session loads (use these for progression suggestions):
+${recentLoads||'No recent notes'}
+
+Athlete question: "${S.preWorkoutNote}"`;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:sys,messages:[{role:'user',content:msg}]})
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:350,system:sys,messages:[{role:'user',content:msg}]})
     });
     const data=await res.json();
     S.preWorkoutResponse=(data.content||[]).map(b=>b.text||'').join('').trim();
@@ -1813,10 +2020,12 @@ async function genFeedback(){
   const sameType=S.log.filter(e=>e.date!==todayKey()&&e.session_type===p?.session_type).slice(-3);
   const recentAll=S.log.slice(-7);
 
+  const hrv=S.hrvSettings||{greenMin:44,amberMin:35};
   const sys=`You are an elite S&C coach reviewing a completed training session for a surf/BJJ athlete.
 Surgery: RIGHT SHOULDER April 24 2026. LEFT ELBOW lateral epicondylalgia recovering.
-HRV baseline 34-47ms. Current phase: Accumulate (wks 3-4), target 70-80% 1RM.
-Strength baselines: Back squat 70kg×6, DB bench 20kg×10, Bulgarian split squat 10kg×8, Glute bridge 50kg×10, Pull-ups 5-6 reps, Chest-supported row 12.5kg, Landmine press 10kg, Echo bike Z2 146w.
+Personal HRV range: GREEN≥${hrv.greenMin}ms, AMBER ${hrv.amberMin}-${hrv.greenMin-1}ms, RED<${hrv.amberMin}ms.
+Current phase: Accumulate (wks 3-4), target 70-80% 1RM.
+When suggesting next session targets, always progress from the actual loads used today (in session notes) not from generic baselines.
 Respond with valid JSON only, no markdown.`;
 
   const msg=`Session just completed:
@@ -1882,12 +2091,62 @@ Provide feedback on this session and a specific next session preview for this se
     if(data.error) throw new Error(data.error.message);
     const text=(data.content||[]).map(b=>b.text||'').join('');
     S.feedback=JSON.parse(text.replace(/```json|```/g,'').trim());
+    saveFeedback(S.feedback); // persist so it survives navigation
     S.showFeedbackModal=true;
   }catch(err){ console.error(err); }
   S.feedbackLoading=false; render();
 }
 
 // ── NUTRITION FEEDBACK ────────────────────────────────────────────────────────
+// ── JOURNAL FEEDBACK ─────────────────────────────────────────────────────────
+async function genJournalFeedback(entry){
+  S.showJournalFeedbackFor=entry.date+entry.type;
+  S.journalFeedbackLoading=true; S.journalFeedback=null; render();
+
+  const isBJJ=entry.type==='bjj';
+  // Get last 5 journal entries of same type for pattern analysis
+  const sameType=[...S.journal].filter(j=>j.type===entry.type&&j.date!==entry.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+
+  const sys = isBJJ
+    ? `You are an elite BJJ coach providing feedback on a training session log. Be specific, practical and encouraging. For each technique noted, suggest one key drill or concept to reinforce it. Look for patterns across sessions (e.g. repeatedly caught from the same position). Mention relevant YouTube search terms in brackets like [YouTube: "X guard sweep tutorial"] for techniques the athlete should review — use descriptive search terms not channel names. Keep total response under 200 words in plain text, no markdown.`
+    : `You are an elite surf coach providing feedback on a surf session log. Be specific and actionable. Reference the conditions, focus areas, and what went well vs work-on. Identify any patterns across sessions. Suggest one specific land-based drill or visualisation for the next session. Keep total response under 150 words in plain text, no markdown.`;
+
+  const entryText = isBJJ
+    ? `Date: ${entry.date}
+Location: ${entry.location||'not noted'}
+Techniques drilled: ${(entry.techniques||[]).map(t=>`${t.name} from ${t.position}: ${t.keySteps}`).join(' | ')||'none'}
+Sparring: ${(entry.rounds||[]).map(r=>`${r.result} vs ${r.partner||'partner'}${r.submission?' ('+r.submission+')':''}${r.notes?' — '+r.notes:''}`).join(' | ')||'none'}
+Drill next: ${entry.drillNext||'not noted'}
+Notes: ${entry.sessionNotes||'none'}`
+    : `Date: ${entry.date}
+Break: ${entry.location||'not noted'}
+Conditions: ${entry.swellSize||'?'} ${entry.swellDir||''}, ${entry.wind||'?'} wind, ${entry.tide||'?'} tide
+Board: ${entry.board||'not noted'}
+Focus: ${entry.sessionFocus||'not noted'}
+What went well: ${entry.wentWell||'none'}
+Work on: ${entry.workOn||'none'}
+Rating: ${entry.rating||'?'}/10
+Notes: ${entry.sessionNotes||'none'}`;
+
+  const histText = sameType.length>0
+    ? `\nPrevious ${isBJJ?'BJJ':'surf'} sessions for pattern analysis:\n${sameType.map(j=>isBJJ
+        ?`${j.date}: techniques: ${(j.techniques||[]).map(t=>t.name).join(', ')||'none'} | sparring: ${(j.rounds||[]).map(r=>r.result).join(', ')||'none'} | drillNext: ${j.drillNext||'none'}`
+        :`${j.date}: ${j.location||'?'}, focus: ${j.sessionFocus||'?'}, went well: ${j.wentWell||'?'}, work on: ${j.workOn||'?'}`
+      ).join('\n')}`
+    : '';
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:sys,messages:[{role:'user',content:`Session log:\n${entryText}${histText}\n\nProvide coaching feedback.`}]})
+    });
+    const data=await res.json();
+    S.journalFeedback=(data.content||[]).map(b=>b.text||'').join('').trim();
+  }catch(err){ S.journalFeedback='Could not get feedback — check connection.'; }
+  S.journalFeedbackLoading=false; render();
+}
+
 async function genNutFeedback(){
   S.nutFeedbackLoading=true; S.nutFeedback=null; render();
   const nut=S.nut;
@@ -2233,6 +2492,27 @@ function mkSettings(){
     cl2.onclick=e=>{e.stopPropagation();if(confirm('Clear your saved API key?')){S.apiKey='';saveApiKey('');S.showSettings=false;render();}};
     m.appendChild(cl2);
   }
+
+  // HRV SETTINGS
+  const hrvSec=d('div','margin-top:24px;');
+  hrvSec.innerHTML=`<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:6px;">🫀 Personal HRV Thresholds</div><div style="font-size:11px;color:#475569;margin-bottom:12px;line-height:1.5;">Set based on your Garmin data. Your 4-week baseline is 38–46ms. GREEN = well recovered above baseline. RED = below your normal range.</div>`;
+  const hrv=S.hrvSettings||{min:30,max:54,greenMin:44,amberMin:35};
+  const hrvFields=[{key:'greenMin',label:'GREEN threshold (≥ this = recovered)',color:'#22c55e',def:44},{key:'amberMin',label:'RED threshold (< this = back off)',color:'#ef4444',def:35}];
+  hrvFields.forEach(f=>{
+    const row=d('div','display:flex;align-items:center;gap:10px;margin-bottom:10px;');
+    const lbl=d('div','flex:1;font-size:11px;color:#94a3b8;line-height:1.4;'); lbl.textContent=f.label;
+    const inp=document.createElement('input'); inp.type='number'; inp.min=20; inp.max=120; inp.value=hrv[f.key]||f.def; inp.className='num-inp';
+    inp.style.cssText=`color:${f.color};border-color:${f.color}40;width:72px;`;
+    const unit=d('span','font-size:12px;color:#374151;'); unit.textContent='ms';
+    inp.addEventListener('click',e2=>e2.stopPropagation());
+    inp.addEventListener('input',e2=>{e2.stopPropagation();hrv[f.key]=parseInt(e2.target.value)||f.def;});
+    row.appendChild(lbl); row.appendChild(inp); row.appendChild(unit); hrvSec.appendChild(row);
+  });
+  const saveHrv=d('button','width:100%;background:#a78bfa18;border:1px solid #a78bfa40;border-radius:10px;padding:11px;color:#a78bfa;font-size:12px;font-weight:700;margin-top:4px;cursor:pointer;');
+  saveHrv.textContent='Save HRV Thresholds';
+  saveHrv.onclick=e=>{e.stopPropagation();S.hrvSettings=hrv;saveHRVSettings(hrv);alert('HRV thresholds saved.');render();};
+  hrvSec.appendChild(saveHrv); m.appendChild(hrvSec);
+
   bg.appendChild(m); return bg;
 }
 
@@ -2366,7 +2646,7 @@ function mkPhotoAnalysis(){
   const uploadArea=d('div','border:2px dashed #1f2937;border-radius:12px;padding:20px;text-align:center;margin-bottom:14px;cursor:pointer;background:#090e1a;position:relative;');
   uploadArea.innerHTML=`<div style="font-size:28px;margin-bottom:6px;">📷</div><div style="font-size:13px;color:#94a3b8;margin-bottom:4px;">${S.photoPreview?'Photo ready — tap to change':'Tap to take or upload a photo'}</div><div style="font-size:11px;color:#374151;">Works best with a clear photo of the plated meal</div>`;
   if(S.photoPreview){const img=document.createElement('img');img.src=S.photoPreview;img.style.cssText='max-width:100%;border-radius:8px;margin-top:10px;max-height:200px;object-fit:cover;';uploadArea.appendChild(img);}
-  const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/*';fileInput.capture='environment';
+  const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/*';
   fileInput.style.cssText='position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
   fileInput.addEventListener('change',e2=>{const file=e2.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{S.photoPreview=ev.target.result;S.photoBase64=ev.target.result.split(',')[1];S.photoMime=file.type;render();};reader.readAsDataURL(file);});
   uploadArea.appendChild(fileInput); m.appendChild(uploadArea);
