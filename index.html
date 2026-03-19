@@ -466,15 +466,26 @@ function freshSurfForm(){
 // ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 function sysPrompt(){
   const dl=daysLeft(),wl=weeksLeft();
-  const hrv=S.hrvSettings||{min:34,max:47,greenMin:45,amberMin:34};
-  const recent=S.log.slice(-30).map(e=>{
-    let line=`${e.date}: Sleep ${e.sleepStr||e.sleep+'h'} score:${e.sleepScore||'?'} | RHR ${e.rhr}bpm | HRV ${e.hrv}ms | E:${e.energy}/10 | Wt:${e.weight||'?'}kg | ${e.bodyBattery?'BB:'+e.bodyBattery+' |':''} Shift:${e.shift} | Gym:${e.gym} | ${e.session_title||'not logged'}`;
-    if(e.sessionAvgWatts) line+=` | Watts:${e.sessionAvgWatts}w HR:${e.sessionAvgHR||'?'}bpm`;
-    if(e.postSessionNote) line+=` | Post: "${e.postSessionNote.slice(0,200)}"`;
-    return line;
-  }).join('\n')||'No history yet.';
-  const recentNotes=S.log.slice(-8).filter(e=>e.postSessionNote).map(e=>`${e.date}: ${e.postSessionNote.slice(0,300)}`).join('\n');
-  // Yesterday nutrition context
+  const hrv=S.hrvSettings||{min:30,max:54,greenMin:44,amberMin:35};
+
+  // ── SESSION ROTATION ANALYSIS ──
+  const last10=S.log.slice(-10);
+  const lowerCount=last10.filter(e=>(e.session_type||'').includes('LOWER')||(e.session_title||'').toLowerCase().includes('lower')).length;
+  const upperCount=last10.filter(e=>(e.session_type||'').includes('UPPER')||(e.session_title||'').toLowerCase().includes('upper')).length;
+  const condCount=last10.filter(e=>(e.session_type||'').includes('CONDITIONING')||(e.session_title||'').toLowerCase().includes('conditioning')).length;
+  const mobilityCount=last10.filter(e=>(e.session_type||'').includes('MOBILITY')||(e.session_title||'').toLowerCase().includes('mobility')).length;
+  const lastSession=last10[last10.length-1];
+  const lastType=lastSession?.session_type||lastSession?.session_title||'unknown';
+  const consecutiveLower=(()=>{let n=0;for(let i=last10.length-1;i>=0;i--){const t=last10[i]?.session_type||last10[i]?.session_title||'';if(t.toLowerCase().includes('lower'))n++;else break;}return n;})();
+  const consecutiveUpper=(()=>{let n=0;for(let i=last10.length-1;i>=0;i--){const t=last10[i]?.session_type||last10[i]?.session_title||'';if(t.toLowerCase().includes('upper'))n++;else break;}return n;})();
+
+  // ── RECENT NOTES FOR LOAD CARRYOVER ──
+  const recentNotes=S.log.slice(-10).filter(e=>e.postSessionNote).map(e=>`${e.date} [${e.session_type||e.session_title||'session'}]: ${e.postSessionNote.slice(0,300)}`).join('\n');
+
+  // ── ELBOW PROGRESSION ANALYSIS ──
+  const elbowNotes=S.log.slice(-14).filter(e=>e.postSessionNote&&(e.postSessionNote.toLowerCase().includes('elbow')||e.postSessionNote.toLowerCase().includes('eccentric')||e.postSessionNote.toLowerCase().includes('isometric'))).map(e=>`${e.date}: ${e.postSessionNote.slice(0,200)}`).join('\n');
+
+  // ── YESTERDAY'S NUTRITION ──
   const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
   const yd=`${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
   let nutContext='';
@@ -483,50 +494,85 @@ function sysPrompt(){
     const yNut=allNut[yd];
     if(yNut){ const yP=Math.round((yNut.foods||[]).reduce((s,f)=>s+f.protein,0)); const yK=Math.round((yNut.foods||[]).reduce((s,f)=>s+f.calories,0)); nutContext=`\nYESTERDAY NUTRITION: ${yP}g protein / ${yK} kcal${yNut.dayNote?' — NOTE: "'+yNut.dayNote+'"':''}`; }
   }catch{}
+
+  const recent=S.log.slice(-30).map(e=>{
+    let line=`${e.date}: Sleep ${e.sleepStr||e.sleep+'h'} score:${e.sleepScore||'?'} | RHR ${e.rhr}bpm | HRV ${e.hrv}ms | E:${e.energy}/10 | Wt:${e.weight||'?'}kg | ${e.bodyBattery?'BB:'+e.bodyBattery+' |':''} Shift:${e.shift} | Gym:${e.gym} | ${e.session_type||e.session_title||'not logged'}`;
+    if(e.sessionAvgWatts) line+=` | Cond:${e.sessionAvgWatts}w/${e.sessionAvgHR||'?'}bpm`;
+    if(e.postSessionNote) line+=` | Post:"${e.postSessionNote.slice(0,150)}"`;
+    return line;
+  }).join('\n')||'No history yet.';
+
   const summaryBlock=S.summaries.length>0?`\nHISTORICAL SUMMARY:\n${S.summaries.map(s=>`${s.dateRange}: ${s.text}`).join('\n')}`:'';
   const prog=activeProgram();
-  const programBlock=prog?`\nACTIVE PROGRAM CONTEXT (set ${prog.date}):\nTrigger: "${prog.trigger}"\n${prog.context}`:'';
+  const programBlock=prog?`\nACTIVE PROGRAM (set ${prog.date}): ${prog.trigger}\n${prog.context}`:'';
+
   return `You are an elite S&C coach for a surf/BJJ athlete.
 PROFILE: Male, rotating shift worker. Surgery: RIGHT SHOULDER April 24 2026 — ${dl} days (~${wl}wks).
 Procedures: Right biceps tenodesis, labral repair, right shoulder stabilisation.
 Sports: Surf 2-4x/wk, BJJ 2-4x/wk — count as training load.
-Diet: Carnivore/animal-based, intermittent fasting most days. High protein priority.
+Diet: Carnivore/animal-based. High protein. Rotating shifts.
 
-LEFT ELBOW — lateral epicondylalgia, improving:
-- Isometrics: 3kg 4×35sec, pain ≤1. Eccentrics: 2kg 3×8, pain ≤2 — DO NOT exceed without explicit progression
-- Rowing aggravates — use bike/ski erg. Tape forearm always. Daily rehab mandatory.
+━━ SESSION HISTORY CONTEXT ━━
+Last 10 sessions breakdown: Lower=${lowerCount} Upper=${upperCount} Conditioning=${condCount} Mobility=${mobilityCount}
+Last session: ${lastType}
+${consecutiveLower>=2?`Note: Lower body has been done ${consecutiveLower} sessions consecutively — factor into recovery when choosing today's session type.`:''}${consecutiveUpper>=2?`Note: Upper body has been done ${consecutiveUpper} sessions consecutively.`:''}${mobilityCount===0&&last10.length>=7?'Note: No dedicated mobility session in last 10 days.':''}
+Use this context alongside today\'s readiness metrics to choose the most appropriate session. The athlete\'s metrics, recovery status, and sport schedule should drive the decision — not rigid rotation rules.
 
-RIGHT SHOULDER: Unstable, cannot contract right pec. Prioritise INCLINE press. Face pulls/pull-aparts/ext rotation mandatory. No heavy overhead.
+━━ ELBOW REHAB — MANDATORY DAILY ━━
+This block appears in EVERY session. Progress based on pain scores in recent notes below.
+PROGRESSION PROTOCOL:
+- Stage 1 — Isometrics only: 3kg 4×35sec, pain ≤1 ✅ (achieved)
+- Stage 2 — Add eccentrics: 2kg 3×8 4sec lower, pain ≤2 ✅ (current working weight)
+- Stage 3 — Progress eccentrics: 2.5kg 3×8, only if 2kg was pain ≤1 for 2+ consecutive sessions
+- Stage 4 — Progress to 3kg eccentrics: only if 2.5kg was pain ≤1 for 2+ sessions
+- Stage 5 — Add pronation/supination: only once eccentrics pain-free
+- NEVER increase load if elbow pain was >2 in previous session
+- If pain was 3+: drop to previous stage, isometrics only that day
+- Rowing pre-fatigue aggravates — do not row and eccentric same day
+- Always tape forearm. Cork ball 3 min soft tissue after.
 
-HRV BASELINE (personal range — calibrate all readiness to this):
-- Personal range: ${hrv.min}–${hrv.max}ms
-- GREEN: HRV≥${hrv.greenMin}, RHR≤50, Sleep≥7h, Score≥78, BB≥70, Energy≥7
-- AMBER: HRV ${hrv.amberMin}–${hrv.greenMin-1} OR RHR 50-58 OR Sleep 6-7h OR Score 65-77 OR BB 40-69 OR Energy 5-6
-- RED: HRV<${hrv.amberMin} OR RHR>60 OR Sleep<6h OR Score<60 OR BB<40 OR Energy≤4
+RECENT ELBOW NOTES (use to determine current stage and whether to progress):
+${elbowNotes||'No recent elbow notes — use Stage 2 defaults.'}
 
-LOAD CARRYOVER — CRITICAL: Check recent session notes below for actual loads used. Always prescribe NEXT progression from what was last done, not the baseline figures.
+━━ LOAD PROGRESSION — CRITICAL ━━
+Always check recent session notes for actual loads used. Prescribe the NEXT step from last actual load, not from baselines.
+Progression rules: add 2.5kg when RPE ≤7 for 2+ sessions. Hold load if RPE 8+. Drop 5-10% if form broke down or pain noted.
 
-RECENT SESSION NOTES (extract actual loads from these):
-${recentNotes||'No recent notes yet.'}
+RECENT SESSION NOTES (extract loads from these):
+${recentNotes||'No recent notes — use baseline loads.'}
 
-BASELINE (use only if no recent note available for that exercise):
+BASELINES (fallback only if no recent notes for that exercise):
 Back squat: 70kg×6 | Bulgarian split squat: 10kg×8 | Glute bridge: 50kg×10
-DB bench (incline preferred): 22.5kg×10 | Pull-ups: 5-6 | Seated row: 20kg×10 | Chest-supported row: 12.5kg
-Landmine press: 10kg 3×8 | Echo bike Z2: 146w baseline
+Incline DB bench (preferred over flat): 22.5kg×10 | Pull-ups: 5-6 reps | Seated row: 20kg×10
+Chest-supported row: 12.5kg | Landmine press: 10kg 3×8 | Echo bike Z2: 146w
 
-EQUIPMENT: HOME: power cage, DBs, plates, Echo Assault Bike, leg ext/curl. WORK: ski erg, C2 rower, assault bike, benches, DBs.
-CONDITIONING (core daily — always prescribe unless RED or 3+ sessions in 3 days):
-HOME=Echo Assault Bike, WORK=Assault Bike or Ski Erg. Avoid rower on elbow days.
-GREEN/AMBER+strength: 15-20min Z2 after. Surf 45+min Z2: covered. BJJ: 10-15min light. Recovery: 20-25min. Missed yesterday: +5min.
+━━ EQUIPMENT ━━
+HOME: power cage, DBs, plates, Echo Assault Bike, leg ext/curl.
+WORK: ski erg, C2 rower, assault bike, flat+incline benches, DBs.
 
-PERIODISATION: Wks 3-4 NOW: Accumulate 70-80%. Wks 5-6: Intensify 80-90%. Wk7+: Taper. Apr 17-24: mobility only.
+━━ CONDITIONING — CORE DAILY COMPONENT ━━
+Always prescribe unless RED readiness or 3+ hard sessions in 3 days.
+HOME=Echo Assault Bike, WORK=Assault Bike or Ski Erg. Avoid rower on elbow-heavy days.
+After strength: 15-20min Z2. Surf 45+min Z2: covered. BJJ: 10-15min light. Recovery day: 20-25min.
+
+━━ SHOULDER PREHAB — EVERY UPPER SESSION ━━
+Right shoulder unstable, cannot fire right pec. Prioritise INCLINE over flat pressing.
+Mandatory in every upper session: face pulls, band pull-aparts, external rotation, serratus.
+
+━━ HRV (personal calibration) ━━
+GREEN: HRV≥${hrv.greenMin}, RHR≤50, Sleep≥7h, Score≥78, BB≥70, Energy≥7
+AMBER: HRV ${hrv.amberMin}–${hrv.greenMin-1} OR RHR 50-58 OR Sleep 6-7h OR Score 65-77
+RED: HRV<${hrv.amberMin} OR RHR>60 OR Sleep<6h OR Score<60 OR BB<40
+
+━━ PERIODISATION ━━
+Wks 3-4 NOW: Accumulate 70-80%. Wks 5-6: Intensify 80-90%. Wk7+: Taper. Apr 17-24: mobility only.
 ${programBlock}${summaryBlock}${nutContext}
 
-RECENT LOG (last 30):
+━━ RECENT LOG (last 30 sessions) ━━
 ${recent}
 
-JSON only, no markdown:
-{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics and post-session notes","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"title","session_type":"HOME_STRENGTH|HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"warmup as numbered steps","blocks":[{"title":"name","exercises":[{"name":"ex","sets":"3x8","load":"SPECIFIC load progressed from recent notes","notes":"cue"}]}],"elbow_block":{"title":"Daily Elbow Rehab","exercises":[{"name":"ex","sets":"sets","load":"load","notes":"note"}]},"conditioning":{"recommended":true,"equipment":"Echo Assault Bike","description":"20 min Echo Assault Bike","duration_mins":20,"target_hr":"115-130 bpm","zone":"Zone 2","skip_reason":"only if recommended=false","notes":"coaching note"},"cooldown":"cooldown","coach_note":"personalised referencing actual loads from recent notes","surf_bjj_note":"advice today","surgery_note":"note given ${dl} days to surgery"}`
+JSON only, no markdown. For elbow_block, include current stage and next progression note:
+{"readiness":"GREEN|AMBER|RED","readiness_score":0-100,"readiness_reason":"2-3 sentences referencing metrics, recent load history, and elbow status","phase":"Foundation|Accumulate|Intensify|Taper","recommendation":"rest|light|moderate|hard","session_title":"descriptive title","session_type":"HOME_LOWER|HOME_UPPER|HOME_CONDITIONING|WORK_UPPER|WORK_CONDITIONING|MOBILITY|ELBOW_ONLY|REST","duration_mins":45,"warmup":"numbered steps","blocks":[{"title":"block name","exercises":[{"name":"exercise","sets":"sets×reps","load":"SPECIFIC load from recent notes — not baseline","notes":"cue or modification"}]}],"elbow_block":{"title":"Daily Elbow Rehab","exercises":[{"name":"exercise","sets":"sets","load":"load based on current stage","notes":"current stage and pain target e.g. Stage 2 — target pain ≤2"}]},"conditioning":{"recommended":true,"equipment":"Echo Assault Bike","description":"e.g. 20 min Echo Assault Bike","duration_mins":20,"target_hr":"115-130 bpm","zone":"Zone 2","skip_reason":"only populate if false","notes":"specific note"},"cooldown":"cooldown","coach_note":"2-3 sentences referencing actual loads from recent notes and session rotation","surf_bjj_note":"surf/BJJ advice","surgery_note":"${dl} days to surgery note"}`;
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
